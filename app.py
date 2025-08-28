@@ -38,23 +38,30 @@ import importlib.metadata
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
+hashed_passwords = stauth.Hasher(["Delta007"]).generate()
+# print(hashed_passwords)   # uncomment locally to see hash
+
+# ✅ Store only the hashed password
 credentials = {
     "usernames": {
         "Farooq": {
             "name": "Farooq Amjad",
-            "password": "Delta007"
+            "password": hashed_passwords[0]
         }
     }
 }
 
+# Authenticator
 authenticator = stauth.Authenticate(
     credentials,
-    "Scorecard-Development",
-    "scorecard_cookie",
+    "Scorecard-Development",   # app name
+    "scorecard_cookie",        # cookie name
     cookie_expiry_days=30
 )
 
-name, authentication_status, username = authenticator.login("Login", "main")
+# 🔐 Login (location must be 'main', 'sidebar' or 'unrendered')
+st.title("🔐 Login")
+name, authentication_status, username = authenticator.login("main")
 
 if authentication_status:
     st.success(f"Welcome {name}")
