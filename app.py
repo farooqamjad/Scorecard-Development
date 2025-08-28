@@ -68,7 +68,7 @@ def require_login():
             if st.button("🚪 Logout", key="logout", help="Click to logout", type="primary"):
                 st.session_state.auth = False
                 st.session_state.username = None
-                st.experimental_rerun()
+                st.rerun()
         return
 
     # --- Login card ---
@@ -127,7 +127,7 @@ def require_login():
             st.session_state.auth = True
             st.session_state.username = username or "User"
             st.success(f"✅ Welcome {st.session_state.username} 👋")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Password is incorrect")
             st.stop()
