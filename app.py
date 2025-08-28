@@ -49,18 +49,16 @@ credentials = {
 }
 
 # --- Authentication Setup ---
+
 authenticator = stauth.Authenticate(
     credentials,
-    'scorecard_cookie',  # cookie name
+    'scorecard_cookie',   # cookie name
     'Scorecard-Development',  # key
     cookie_expiry_days=30
 )
 
 # --- Login Form ---
-name, auth_status = authenticator.login(
-    location='main',
-    form_name='Login'
-)
+name, auth_status = authenticator.login("Login", "main")
 
 # --- Login Feedback ---
 if auth_status:
