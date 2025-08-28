@@ -39,11 +39,15 @@ st.write("streamlit-authenticator version:", importlib.metadata.version("streaml
 
 
 # --- Credentials Dictionary ---
+import streamlit as st
+import streamlit_authenticator as stauth
+
+# --- Credentials Dictionary ---
 credentials = {
     "usernames": {
         "farooq": {
             "name": "Farooq",
-            "password": stauth.Hasher.hash("Delta007")  # properly hashed
+            "password": stauth.Hasher.hash("Delta007")  # hash in correct format
         }
     }
 }
@@ -57,7 +61,10 @@ authenticator = stauth.Authenticate(
 )
 
 # --- Login Form ---
-name, auth_status, username = authenticator.login("main", "Login")
+name, auth_status, username = authenticator.login(
+    location="main",
+    form_name="Login"
+)
 
 # --- Login Feedback ---
 if auth_status:
