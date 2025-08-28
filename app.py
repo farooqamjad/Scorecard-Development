@@ -36,24 +36,23 @@ import bcrypt
 import importlib.metadata
 
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
-# Define credentials
-password = 'Delta007'
-hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
 
 # --- Credentials Dictionary ---
 credentials = {
-    'usernames': {
-        'farooq': {
-            'name': 'Farooq',
-            'password': hashed_password
+    "usernames": {
+        "farooq": {
+            "name": "Farooq",
+            "password": stauth.Hasher(["Delta007"]).generate()[0]  # properly hashed
         }
     }
 }
 
+# --- Authentication Setup ---
 authenticator = stauth.Authenticate(
     credentials,
-    'scorecard_cookie',   # cookie name
-    'Scorecard-Development',  # key
+    "scorecard_cookie",        # cookie name
+    "Scorecard-Development",   # key
     cookie_expiry_days=30
 )
 
