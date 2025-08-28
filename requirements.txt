@@ -15,4 +15,4 @@ seaborn
 plotly
 bcrypt
 XlsxWriter
-importlib-metadata 
+importlib-metadata

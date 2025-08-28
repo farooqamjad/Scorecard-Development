@@ -30,7 +30,7 @@ from streamlit_extras.customize_running import center_running
 import plotly.graph_objects as go
 logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
-import streamlit_authenticator as stauth 
+import streamlit_authenticator as stauth
 import importlib.metadata
 import bcrypt
 
