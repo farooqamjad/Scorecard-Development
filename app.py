@@ -37,23 +37,66 @@ import bcrypt
 FIXED_PASSWORD = "Delta007"
 
 def require_login():
-    # already authenticated → don’t show login form/title
+    # already authenticated → don’t show login form
     if st.session_state.get("auth", False):
         return
 
-    # show login form if not logged in
-    st.title("🔐 Login")
+    # --- Centered login card ---
+    st.markdown(
+        """
+        <style>
+        .login-card {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f0f4f8, #d9e4ec);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            text-align: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .login-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #0d3b66;
+        }
+        .stButton button {
+            width: 100%;
+            border-radius: 10px;
+            padding: 0.6rem;
+            font-size: 16px;
+            background: #0d3b66;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+        }
+        .stButton button:hover {
+            background: #145DA0;
+            transform: scale(1.05);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
+    # --- Login form ---
     with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+        st.markdown('<div class="login-title">🔐 Secure Login</div>', unsafe_allow_html=True)
+
+        username = st.text_input("👤 Username")
+        password = st.text_input("🔑 Password", type="password")
         submitted = st.form_submit_button("Login")
 
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Check password ---
     if submitted:
         if password == FIXED_PASSWORD:
             st.session_state.auth = True
             st.session_state.username = username or "User"
-            st.success(f"✅ Login successful! Welcome {st.session_state.username} 👋")
+            st.success(f"✅ Welcome {st.session_state.username} 👋")
             st.rerun()
         else:
             st.error("❌ Password is incorrect")
@@ -63,9 +106,9 @@ def require_login():
     st.stop()
 
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # 🔐 Require login before continuing
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 require_login()
 
 st.markdown("""
