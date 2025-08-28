@@ -38,12 +38,15 @@ import importlib.metadata
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
-hashed_pw = "$2b$12$18mdpASVj6aeVtC9.etdGeEhWRnHmNFZraeUGOuZkWXPEa16EEx8S"
+fixed_password = "Delta007"
+hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
 
+# Dynamically accept any username
+# We use a dummy user and then override username later
 credentials = {
     "usernames": {
-        "Farooq": {
-            "name": "Farooq Amjad",
+        "dummy": {
+            "name": "Any User",
             "password": hashed_pw
         }
     }
@@ -51,22 +54,28 @@ credentials = {
 
 authenticator = stauth.Authenticate(
     credentials,
-    "Scorecard-Development",   # app name
-    "scorecard_cookie",        # cookie name
+    "Scorecard-Development",
+    "scorecard_cookie",
     cookie_expiry_days=30
 )
 
 st.title("🔐 Login")
 
-# v0.4.2 → login only returns authentication_status
 authentication_status = authenticator.login("main")
 
 if authentication_status:
-    st.success(f"Welcome {authenticator.get_name()} 👋")
+    # ✅ Capture whatever username the user typed
+    username = st.session_state.get("username", "User")
+    st.success(f"Welcome {username} 👋 (authenticated with fixed password)")
+
+    # Rest of your app here...
+    st.sidebar.title("📌 Navigation")
+    authenticator.logout("Logout", "sidebar")
+
 elif authentication_status is False:
-    st.error("Username/password is incorrect")
+    st.error("❌ Password is incorrect")
 else:
-    st.warning("Please enter your username and password")
+    st.warning("🔑 Please enter your username and password")
 
 st.markdown("""
     <style>
