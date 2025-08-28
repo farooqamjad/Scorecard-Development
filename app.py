@@ -38,21 +38,16 @@ import importlib.metadata
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
-# --- Credentials Dictionary ---
-import streamlit as st
-import streamlit_authenticator as stauth
-
-# --- Credentials Dictionary ---
 credentials = {
     "usernames": {
         "farooq": {
             "name": "Farooq",
-            "password": stauth.Hasher.hash("Delta007")  # hashed in correct format
+            "password": stauth.Hasher.hash("Delta007")  # proper hash
         }
     }
 }
 
-# --- Authentication Setup ---
+# --- Initialize Authenticator ---
 authenticator = stauth.Authenticate(
     credentials,
     "scorecard_cookie",        # cookie name
@@ -66,7 +61,7 @@ name, auth_status = authenticator.login(
     form_name="Login"
 )
 
-# --- Login Feedback ---
+# --- Response Handling ---
 if auth_status:
     st.sidebar.success(f"✅ Welcome {name}")
     authenticator.logout("🚪 Logout", "sidebar")
