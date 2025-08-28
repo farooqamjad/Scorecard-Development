@@ -43,7 +43,7 @@ credentials = {
     "usernames": {
         "farooq": {
             "name": "Farooq",
-            "password": stauth.Hasher(["Delta007"]).generate()[0]  # properly hashed
+            "password": stauth.Hasher.hash("Delta007")  # properly hashed
         }
     }
 }
@@ -62,7 +62,7 @@ name, auth_status, username = authenticator.login("main", "Login")
 # --- Login Feedback ---
 if auth_status:
     st.sidebar.success(f"✅ Welcome {name}")
-    authenticator.logout("🚪 Logout", "sidebar")  # optional logout button
+    authenticator.logout("🚪 Logout", "sidebar")
 elif auth_status is False:
     st.error("❌ Username or password is incorrect")
     st.stop()
