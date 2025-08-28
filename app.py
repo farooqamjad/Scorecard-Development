@@ -31,6 +31,29 @@ import plotly.graph_objects as go
 logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
 
+import streamlit_authenticator as stauth 
+
+
+names = ['Farooq']
+usernames = ['farooq']
+hashed_passwords = ['$2b$12$mlb.aCD99cuyDgClSqWIG.2PcwH/V1Zgv4Ukgr5CfuadGZbiqxpdG']
+
+authenticator = stauth.Authenticate(
+    names, usernames, hashed_passwords,
+    'Scorecard-Development', 'abcdef', cookie_expiry_days=30
+)
+
+name, auth_status, username = authenticator.login('Login', 'main')
+
+if auth_status:
+    st.sidebar.success(f"Welcome {name}")
+elif auth_status is False:
+    st.error('Username or password is incorrect')
+    st.stop()
+else:
+    st.warning('Please enter your credentials')
+    
+
 st.markdown("""
     <style>
         .center-wrapper {

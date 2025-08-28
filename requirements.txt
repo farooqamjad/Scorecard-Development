@@ -1,0 +1,13 @@
+streamlit
+seaborn
+scorecardpy
+streamlit-tags
+streamlit-extras
+xlsx2csv
+plotly
+statsmodels
+pandas
+numpy
+matplotlib
+scikit-learn
+scipy
