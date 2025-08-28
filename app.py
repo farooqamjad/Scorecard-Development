@@ -34,48 +34,30 @@ import streamlit_authenticator as stauth
 import importlib.metadata
 import bcrypt
 
-st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
+FIXED_PASSWORD = "Delta007"
 
-fixed_password = "Delta007"
-hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
+def require_login():
+    st.title("🔐 Login")
 
-# Dummy user (required by streamlit-authenticator)
-credentials = {
-    "usernames": {
-        "dummy": {
-            "email": "dummy@example.com",
-            "name": "Any User",
-            "password": hashed_pw
-        }
-    }
-}
+    # already authenticated
+    if st.session_state.get("auth", False):
+        return
 
-# Authenticator
-authenticator = stauth.Authenticate(
-    credentials,
-    "Scorecard-Development",
-    "scorecard_cookie",
-    cookie_expiry_days=30
-)
+    # show login form
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
 
-st.title("🔐 Login")
-
-# Show login form in main area
-authenticator.login("main")
-
-# Pull values from session_state (this is how v0.4.2 works)
-authentication_status = st.session_state.get("authentication_status")
-username = st.session_state.get("username", "User")
-
-if authentication_status:
-    st.success(f"✅ Login successful! Welcome {username} 👋")
-    authenticator.logout("Logout", "sidebar")
-
-elif authentication_status is False:
-    st.error("❌ Password is incorrect")
-
-else:
-    st.warning("🔑 Please enter your username and password")
+    if submitted:
+        if password == FIXED_PASSWORD:
+            st.session_state.auth = True
+            st.session_state.username = username or "User"
+            st.success(f"✅ Login successful! Welcome {st.session_state.username} 👋")
+            st.rerun()
+        else:
+            st.error("❌ Password is incorrect")
+            st.stop()
 
 st.markdown("""
     <style>
