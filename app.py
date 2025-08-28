@@ -50,8 +50,6 @@ credentials = {
     }
 }
 
-# --- Authentication Setup ---
-
 authenticator = stauth.Authenticate(
     credentials,
     'scorecard_cookie',   # cookie name
@@ -60,14 +58,12 @@ authenticator = stauth.Authenticate(
 )
 
 # --- Login Form ---
-name, auth_status = authenticator.login(
-    form_name="Login",
-    location="main"
-) 
+name, auth_status, username = authenticator.login("Login", "main")
 
 # --- Login Feedback ---
 if auth_status:
     st.sidebar.success(f"✅ Welcome {name}")
+    authenticator.logout("🚪 Logout", "sidebar")  # optional logout button
 elif auth_status is False:
     st.error("❌ Username or password is incorrect")
     st.stop()
