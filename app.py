@@ -38,11 +38,13 @@ import importlib.metadata
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
+hashed_pw = "$2b$12$18mdpASVj6aeVtC9.etdGeEhWRnHmNFZraeUGOuZkWXPEa16EEx8S"
+
 credentials = {
     "usernames": {
         "Farooq": {
             "name": "Farooq Amjad",
-            "password": "$2b$12$18mdpASVj6aeVtC9.etdGeEhWRnHmNFZraeUGOuZkWXPEa16EEx8S"
+            "password": hashed_pw
         }
     }
 }
@@ -55,10 +57,12 @@ authenticator = stauth.Authenticate(
 )
 
 st.title("🔐 Login")
-name, authentication_status, username = authenticator.login("main")
+
+# v0.4.2 → login only returns authentication_status
+authentication_status = authenticator.login("main")
 
 if authentication_status:
-    st.success(f"Welcome {name}")
+    st.success(f"Welcome {authenticator.get_name()} 👋")
 elif authentication_status is False:
     st.error("Username/password is incorrect")
 else:
