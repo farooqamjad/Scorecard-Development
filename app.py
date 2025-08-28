@@ -33,7 +33,9 @@ warnings.filterwarnings("ignore")
 
 import streamlit_authenticator as stauth 
 import bcrypt
+import importlib.metadata
 
+st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 # Define credentials
 password = 'Delta007'
 hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
