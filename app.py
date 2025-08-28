@@ -36,11 +36,10 @@ import bcrypt
 
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
-
 fixed_password = "Delta007"
 hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
 
-# Credentials (must include email, name, password)
+# Dummy user (streamlit-authenticator requires at least one entry)
 credentials = {
     "usernames": {
         "dummy": {
@@ -61,8 +60,11 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 Login")
 
-# Correct login call
-name, authentication_status, username = authenticator.login("main")
+# v0.4.2 returns only (name, authentication_status)
+name, authentication_status = authenticator.login("main")
+
+# ✅ Override username with whatever the user typed
+username = st.session_state.get("username", "User")
 
 if authentication_status:
     st.success(f"✅ Login successful! Welcome {username} 👋")
@@ -73,6 +75,7 @@ elif authentication_status is False:
 
 else:
     st.warning("🔑 Please enter your username and password")
+    
 st.markdown("""
     <style>
         .center-wrapper {
