@@ -1056,7 +1056,7 @@ elif menu == "🎯 Variables Selection":
 
             col1, col2, col3 = st.columns([1, 2, 2])
             with col1:
-                show_graphs = st.button("👀 View WOE Trend Graphs")
+                show_graphs = st.button("👀 View WOE Trend Graphs", tpye="primary")
             with col2:
                 rotation_vars = st.multiselect(
                     "Rotate X-ticks for:",
@@ -1179,6 +1179,28 @@ elif menu == "🎯 Variables Selection":
                 st.session_state[key] = default
 
         if st.session_state.get("woe_iv_result") is not None:
+            @st.cache_data(show_spinner=False)
+            def calculate_vif_cached(df_for_vif, iv_map):
+                from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+                results = []
+                my_bar = st.progress(0, text="⚙️ Calculating VIF...")
+
+                for i, col in enumerate(df_for_vif.columns):
+                    vif = variance_inflation_factor(df_for_vif.values, i)
+                    results.append((col, vif))
+                    my_bar.progress((i + 1) / len(df_for_vif.columns), text=f"⚙️ Calculating VIF... ({col})")
+
+                my_bar.empty()
+
+                vif_data = pd.DataFrame(results, columns=["Features", "VIF"])
+                vif_data["VIF"] = vif_data["VIF"].replace([np.inf, -np.inf], np.nan).fillna(999)
+                vif_data["Clean Feature"] = vif_data["Features"].str.replace("_woe", "", regex=False)
+                vif_data["IV"] = vif_data["Clean Feature"].map(iv_map).fillna("N/A")
+                vif_data = vif_data.sort_values(by="VIF", ascending=False).reset_index(drop=True)
+                vif_data.index = vif_data.index + 1
+
+                return vif_data            
             style_expander_header()
             with st.expander("🧮 VIF & Correlation Analysis", expanded=st.session_state.vif_expander_open):
 
@@ -1197,25 +1219,11 @@ elif menu == "🎯 Variables Selection":
                                 df_for_vif.rename(columns=lambda x: x.replace("_woe", "") if "_woe" in x else x, inplace=True)
                                 df_for_vif = df_for_vif.replace([np.inf, -np.inf], np.nan).dropna()
 
-                                vif_values = [
-                                    variance_inflation_factor(df_for_vif.values, i)
-                                    for i in range(df_for_vif.shape[1])
-                                ]
-                                vif_data = pd.DataFrame({
-                                    "Features": df_for_vif.columns,
-                                    "VIF": vif_values
-                                })
-                                vif_data["VIF"] = vif_data["VIF"].replace([np.inf, -np.inf], np.nan).fillna(999)
-                                vif_data["Clean Feature"] = vif_data["Features"].str.replace("_woe", "", regex=False)
-
                                 iv_df = st.session_state.woe_iv_result[1]
                                 iv_map = dict(zip(iv_df["Variable"], iv_df["Information Value"]))
-                                vif_data["IV"] = vif_data["Clean Feature"].map(iv_map).fillna("N/A")
 
-                                vif_data = vif_data.sort_values(by="VIF", ascending=False).reset_index(drop=True)
-                                vif_data.index = vif_data.index + 1
-
-                                st.session_state.vif_data = vif_data
+                                # ✅ Use cached calculation
+                                st.session_state.vif_data = calculate_vif_cached(df_for_vif, iv_map)
                                 st.session_state.df_for_vif = df_for_vif
                                 st.session_state.iv_map = iv_map
 
@@ -1227,14 +1235,14 @@ elif menu == "🎯 Variables Selection":
                             "🔗 Show Correlation View",
                             value=st.session_state.get("show_corr", False)
                         )
+
+                    # 🔹 Display VIF Results
                     if st.session_state.vif_data is not None:
                         vif_df = st.session_state.vif_data.copy()
 
                         required_cols = ["Clean Feature", "VIF", "IV"]
-                        missing_cols = [col for col in required_cols if col not in vif_df.columns]
-
-                        if missing_cols:
-                            st.error(f"❌ Missing columns in VIF DataFrame: {', '.join(missing_cols)}")
+                        if not all(col in vif_df.columns for col in required_cols):
+                            st.error("❌ Missing columns in VIF DataFrame")
                         else:
                             display_df = vif_df[required_cols].rename(columns={"Clean Feature": "Variable"})
                             styled_vif = style_vif_table(display_df, threshold=vif_threshold)
@@ -1249,46 +1257,24 @@ elif menu == "🎯 Variables Selection":
                             )
 
                             if st.button("♻️ Recalculate VIF after Removal", key="btn_recalc_vif"):
-                                st.session_state.vif_removal_triggered = True
-
                                 rem_vars = st.session_state.get("rem_vif_vars", [])
 
+                                # ✅ Remove from datasets
                                 st.session_state.final_woe_data = st.session_state.final_woe_data.drop(
-                                    columns=[
-                                        v + "_woe" if v + "_woe" in st.session_state.final_woe_data.columns else v
-                                        for v in rem_vars
-                                    ],
+                                    columns=[v + "_woe" if v + "_woe" in st.session_state.final_woe_data.columns else v
+                                            for v in rem_vars],
                                     errors="ignore"
                                 )
-
                                 st.session_state.cdata_aligned = st.session_state.cdata_aligned.drop(columns=rem_vars, errors='ignore')
-
-                                st.session_state.removed_vif_vars = rem_vars
 
                                 st.success(f"✅ Removed {len(rem_vars)} variable(s): {', '.join(rem_vars) if rem_vars else 'None'}")
 
+                                # ✅ Recalculate VIF again with cache
                                 df_for_vif = st.session_state.final_woe_data.drop(columns=["target"], errors="ignore")
                                 df_for_vif.rename(columns=lambda x: x.replace("_woe", "") if "_woe" in x else x, inplace=True)
                                 df_for_vif = df_for_vif.replace([np.inf, -np.inf], np.nan).dropna()
 
-                                vif_values = [
-                                    variance_inflation_factor(df_for_vif.values, i)
-                                    for i in range(df_for_vif.shape[1])
-                                ]
-                                vif_data = pd.DataFrame({
-                                    "Features": df_for_vif.columns,
-                                    "VIF": vif_values
-                                })
-                                vif_data["VIF"] = vif_data["VIF"].replace([np.inf, -np.inf], np.nan).fillna(999)
-                                vif_data["Clean Feature"] = vif_data["Features"].str.replace("_woe", "", regex=False)
-
-                                iv_map = st.session_state.iv_map
-                                vif_data["IV"] = vif_data["Clean Feature"].map(iv_map).fillna("N/A")
-
-                                vif_data = vif_data.sort_values(by="VIF", ascending=False).reset_index(drop=True)
-                                vif_data.index = vif_data.index + 1
-
-                                st.session_state.vif_data = vif_data
+                                st.session_state.vif_data = calculate_vif_cached(df_for_vif, st.session_state.iv_map)
                                 st.session_state.df_for_vif = df_for_vif
                                 st.session_state.vif_expander_open = True
 
