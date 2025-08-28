@@ -39,7 +39,7 @@ st.write("streamlit-authenticator version:", importlib.metadata.version("streaml
 fixed_password = "Delta007"
 hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
 
-# Dummy user (streamlit-authenticator requires at least one entry)
+# Dummy user (required by streamlit-authenticator)
 credentials = {
     "usernames": {
         "dummy": {
@@ -60,10 +60,11 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 Login")
 
-# v0.4.2 returns only (name, authentication_status)
-name, authentication_status = authenticator.login("main")
+# Show login form in main area
+authenticator.login("main")
 
-# ✅ Override username with whatever the user typed
+# Pull values from session_state (this is how v0.4.2 works)
+authentication_status = st.session_state.get("authentication_status")
 username = st.session_state.get("username", "User")
 
 if authentication_status:
@@ -75,7 +76,7 @@ elif authentication_status is False:
 
 else:
     st.warning("🔑 Please enter your username and password")
-    
+
 st.markdown("""
     <style>
         .center-wrapper {
