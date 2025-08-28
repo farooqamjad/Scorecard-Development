@@ -76,34 +76,47 @@ def require_login():
         """
         <style>
         .login-card {
-            max-width: 400px;
+            max-width: 420px;
             margin: 100px auto;
             padding: 2rem;
-            border-radius: 15px;
-            background: linear-gradient(135deg, #f0f4f8, #d9e4ec);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-radius: 18px;
+            background: linear-gradient(135deg, #e0f7fa, #c8e6c9);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             text-align: center;
             font-family: 'Segoe UI', sans-serif;
+            animation: fadeIn 0.8s ease-in-out;
         }
         .login-title {
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 700;
-            margin-bottom: 20px;
-            color: #0d3b66;
+            margin-bottom: 10px;
+            color: #004d40;
+        }
+        .login-subtitle {
+            font-size: 16px;
+            color: #00695c;
+            margin-bottom: 25px;
+        }
+        .stTextInput label, .stTextInput input {
+            font-size: 15px;
         }
         .stButton button {
             width: 100%;
             border-radius: 10px;
             padding: 0.6rem;
             font-size: 16px;
-            background: #0d3b66;
+            background: #00796b;
             color: white;
             font-weight: 600;
             transition: all 0.3s ease-in-out;
         }
         .stButton button:hover {
-            background: #145DA0;
+            background: #004d40;
             transform: scale(1.05);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         </style>
         """,
@@ -114,6 +127,7 @@ def require_login():
     with st.form("login_form", clear_on_submit=False):
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown('<div class="login-title">🔐 Secure Login</div>', unsafe_allow_html=True)
+        st.markdown('<div class="login-subtitle">Welcome back! Please enter your credentials to continue.</div>', unsafe_allow_html=True)
 
         username = st.text_input("👤 Username")
         password = st.text_input("🔑 Password", type="password")
