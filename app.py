@@ -40,16 +40,18 @@ st.write("streamlit-authenticator version:", importlib.metadata.version("streaml
 fixed_password = "Delta007"
 hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
 
-# Dummy user (any username allowed)
+# Credentials (with required structure)
 credentials = {
     "usernames": {
         "dummy": {
+            "email": "dummy@example.com",
             "name": "Any User",
             "password": hashed_pw
         }
     }
 }
 
+# Authenticator
 authenticator = stauth.Authenticate(
     credentials,
     "Scorecard-Development",
@@ -59,7 +61,7 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 Login")
 
-# ✅ Correct call → this actually renders username + password fields
+# Login form
 name, authentication_status, username = authenticator.login("main")
 
 if authentication_status:
