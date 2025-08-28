@@ -63,11 +63,8 @@ st.title("🔐 Login")
 authentication_status = authenticator.login("main")
 
 if authentication_status:
-    # ✅ Capture whatever username the user typed
     username = st.session_state.get("username", "User")
-    st.success(f"Welcome {username} 👋 (authenticated with fixed password)")
-
-    # Rest of your app here...
+    st.success(f"✅ Login successful! Welcome {username} 👋")
     st.sidebar.title("📌 Navigation")
     authenticator.logout("Logout", "sidebar")
 
