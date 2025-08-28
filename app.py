@@ -59,6 +59,15 @@ def require_login():
             st.error("❌ Password is incorrect")
             st.stop()
 
+    # 🚨 Block rest of the app until logged in
+    st.stop()
+
+
+# -----------------------------------------------------------------------------
+# 🔐 Require login before continuing
+# -----------------------------------------------------------------------------
+require_login()
+
 st.markdown("""
     <style>
         .center-wrapper {
