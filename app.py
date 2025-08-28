@@ -1056,7 +1056,7 @@ elif menu == "🎯 Variables Selection":
 
             col1, col2, col3 = st.columns([1, 2, 2])
             with col1:
-                show_graphs = st.button("👀 View WOE Trend Graphs", tpye="primary")
+                show_graphs = st.button("👀 View WOE Trend Graphs")
             with col2:
                 rotation_vars = st.multiselect(
                     "Rotate X-ticks for:",
