@@ -236,16 +236,6 @@ def style_expander_header():
         div[data-testid="stExpander"] > details > summary:hover {
             background-color: #bbdefb;
         }
-
-        /* ✅ Green Theme for Expanders with 'Category:' in label */
-        div[data-testid="stExpander"] > details > summary:has(span:contains("Category:")) {
-            background-color: #e8f5e9 !important;
-            color: #1b5e20 !important;
-            border: 1px solid #388e3c !important;
-        }
-        div[data-testid="stExpander"] > details > summary:has(span:contains("Category:")):hover {
-            background-color: #c8e6c9 !important;
-        }
         </style>
     """, unsafe_allow_html=True)
 
