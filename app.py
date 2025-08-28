@@ -38,39 +38,23 @@ import importlib.metadata
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
-credentials = {
-    "usernames": {
-        "farooq": {
-            "name": "Farooq",
-            "password": stauth.Hasher.hash("Delta007")  # proper hash
-        }
-    }
-}
+users = {'Farooq': 'Delta007'}
 
-# --- Initialize Authenticator ---
 authenticator = stauth.Authenticate(
-    credentials,
-    "scorecard_cookie",        # cookie name
-    "Scorecard-Development",   # key
+    users,
+    'Scorecard-Development',
+    'scorecard_cookie',
     cookie_expiry_days=30
 )
 
-# --- Login Form ---
-name, auth_status = authenticator.login(
-    location="main",
-    form_name="Login"
-)
+name, authentication_status = authenticator.login('Login', 'main')
 
-# --- Response Handling ---
-if auth_status:
-    st.sidebar.success(f"✅ Welcome {name}")
-    authenticator.logout("🚪 Logout", "sidebar")
-elif auth_status is False:
-    st.error("❌ Username or password is incorrect")
-    st.stop()
+if authentication_status:
+    st.write("Welcome", name)
+elif authentication_status is False:
+    st.error("Username/password is incorrect")
 else:
-    st.warning("⚠️ Please enter your credentials")
-    st.stop()
+    st.warning("Please enter your username and password")
 
 st.markdown("""
     <style>
