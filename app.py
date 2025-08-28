@@ -37,11 +37,41 @@ import bcrypt
 FIXED_PASSWORD = "Delta007"
 
 def require_login():
-    # already authenticated → don’t show login form
+    # Already logged in → show sidebar logout
     if st.session_state.get("auth", False):
+        with st.sidebar:
+            st.markdown(
+                f"""
+                <style>
+                .logout-btn button {{
+                    width: 100%;
+                    background: linear-gradient(135deg, #ff4b5c, #ff6f61);
+                    color: white !important;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 0.6rem;
+                    font-size: 16px;
+                    font-weight: 600;
+                    box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+                    transition: all 0.3s ease-in-out;
+                }}
+                .logout-btn button:hover {{
+                    background: linear-gradient(135deg, #e63946, #ff4b5c);
+                    transform: scale(1.05);
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(f"👋 Welcome **{st.session_state.username}**")
+            if st.button("🚪 Logout", key="logout", help="Click to logout", type="primary"):
+                st.session_state.auth = False
+                st.session_state.username = None
+                st.experimental_rerun()
         return
 
-    # --- Centered login card ---
+    # --- Login card ---
     st.markdown(
         """
         <style>
@@ -91,18 +121,18 @@ def require_login():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Check password ---
+    # --- Check login ---
     if submitted:
         if password == FIXED_PASSWORD:
             st.session_state.auth = True
             st.session_state.username = username or "User"
             st.success(f"✅ Welcome {st.session_state.username} 👋")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("❌ Password is incorrect")
             st.stop()
 
-    # 🚨 Block rest of the app until logged in
+    # 🚨 Block rest of app until logged in
     st.stop()
 
 
