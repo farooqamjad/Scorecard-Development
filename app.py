@@ -60,13 +60,11 @@ authenticator = stauth.Authenticate(
 st.title("🔐 Login")
 
 # ✅ Correct call → this actually renders username + password fields
-name, authentication_status, username = authenticator.login("Login", "main")
+name, authentication_status, username = authenticator.login("main")
 
 if authentication_status:
     st.success(f"✅ Login successful! Welcome {username} 👋")
     authenticator.logout("Logout", "sidebar")
-    st.sidebar.title("📌 Navigation")
-    st.write("Now showing Credit Risk Scorecard...")
 
 elif authentication_status is False:
     st.error("❌ Password is incorrect")
