@@ -60,7 +60,11 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 Login")
 
-authentication_status = authenticator.login("main")
+if "authentication_status" not in st.session_state:
+    authentication_status = authenticator.login("main")
+    st.session_state.authentication_status = authentication_status
+else:
+    authentication_status = st.session_state.authentication_status
 
 if authentication_status:
     username = st.session_state.get("username", "User")
@@ -70,6 +74,8 @@ if authentication_status:
 
 elif authentication_status is False:
     st.error("❌ Password is incorrect")
+    # Allow retry
+    st.session_state.authentication_status = None
 else:
     st.warning("🔑 Please enter your username and password")
 
