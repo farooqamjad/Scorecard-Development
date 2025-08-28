@@ -32,26 +32,42 @@ logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
 
 import streamlit_authenticator as stauth 
+import bcrypt
 
+# Define credentials
+password = 'Delta007'
+hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-names = ['Farooq']
-usernames = ['farooq']
-hashed_passwords = ['$2b$12$mlb.aCD99cuyDgClSqWIG.2PcwH/V1Zgv4Ukgr5CfuadGZbiqxpdG']
+# --- Credentials Dictionary ---
+credentials = {
+    'usernames': {
+        'farooq': {
+            'name': 'Farooq',
+            'password': hashed_password
+        }
+    }
+}
 
+# --- Authentication Setup ---
 authenticator = stauth.Authenticate(
-    names, usernames, hashed_passwords,
-    'Scorecard-Development', 'abcdef', cookie_expiry_days=30
+    credentials,
+    'scorecard_cookie',  # cookie name
+    'Scorecard-Development',  # key
+    cookie_expiry_days=30
 )
 
+# --- Login Form ---
 name, auth_status, username = authenticator.login('Login', 'main')
 
+# --- Login Feedback ---
 if auth_status:
-    st.sidebar.success(f"Welcome {name}")
+    st.sidebar.success(f"✅ Welcome {name}")
 elif auth_status is False:
-    st.error('Username or password is incorrect')
+    st.error("❌ Username or password is incorrect")
     st.stop()
 else:
-    st.warning('Please enter your credentials')
+    st.warning("⚠️ Please enter your credentials")
+    st.stop()
     
 
 st.markdown("""
