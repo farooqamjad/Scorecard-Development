@@ -37,13 +37,13 @@ import bcrypt
 FIXED_PASSWORD = "Delta007"
 
 def require_login():
-    st.title("🔐 Login")
-
-    # already authenticated
+    # already authenticated → don’t show login form/title
     if st.session_state.get("auth", False):
         return
 
-    # show login form
+    # show login form if not logged in
+    st.title("🔐 Login")
+
     with st.form("login_form", clear_on_submit=False):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -63,9 +63,9 @@ def require_login():
     st.stop()
 
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # 🔐 Require login before continuing
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 require_login()
 
 st.markdown("""
