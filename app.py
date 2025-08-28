@@ -1278,6 +1278,9 @@ elif menu == "🎯 Variables Selection":
                                 st.session_state.df_for_vif = df_for_vif
                                 st.session_state.vif_expander_open = True
 
+                                # ✅ Ye line add karo
+                                st.session_state.vif_removal_triggered = True
+
                                 st.rerun()
                             elif not st.session_state.get("vif_removal_triggered", False):
                                 st.warning("⚠️ Select variables based on VIF to remove or press Recalculate button to move forward.")
