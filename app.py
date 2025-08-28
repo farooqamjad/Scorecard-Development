@@ -40,8 +40,7 @@ st.write("streamlit-authenticator version:", importlib.metadata.version("streaml
 fixed_password = "Delta007"
 hashed_pw = bcrypt.hashpw(fixed_password.encode(), bcrypt.gensalt()).decode()
 
-# Dynamically accept any username
-# We use a dummy user and then override username later
+# Dummy user (any username allowed)
 credentials = {
     "usernames": {
         "dummy": {
@@ -60,22 +59,17 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 Login")
 
-if "authentication_status" not in st.session_state:
-    authentication_status = authenticator.login("main")
-    st.session_state.authentication_status = authentication_status
-else:
-    authentication_status = st.session_state.authentication_status
+# ✅ Correct call → this actually renders username + password fields
+name, authentication_status, username = authenticator.login("Login", "main")
 
 if authentication_status:
-    username = st.session_state.get("username", "User")
     st.success(f"✅ Login successful! Welcome {username} 👋")
-    st.sidebar.title("📌 Navigation")
     authenticator.logout("Logout", "sidebar")
+    st.sidebar.title("📌 Navigation")
+    st.write("Now showing Credit Risk Scorecard...")
 
 elif authentication_status is False:
     st.error("❌ Password is incorrect")
-    # Allow retry
-    st.session_state.authentication_status = None
 else:
     st.warning("🔑 Please enter your username and password")
 
