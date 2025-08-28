@@ -47,7 +47,7 @@ credentials = {
     "usernames": {
         "farooq": {
             "name": "Farooq",
-            "password": stauth.Hasher.hash("Delta007")  # hash in correct format
+            "password": stauth.Hasher.hash("Delta007")  # hashed in correct format
         }
     }
 }
@@ -61,7 +61,7 @@ authenticator = stauth.Authenticate(
 )
 
 # --- Login Form ---
-name, auth_status, username = authenticator.login(
+name, auth_status = authenticator.login(
     location="main",
     form_name="Login"
 )
@@ -76,7 +76,6 @@ elif auth_status is False:
 else:
     st.warning("⚠️ Please enter your credentials")
     st.stop()
-    
 
 st.markdown("""
     <style>
