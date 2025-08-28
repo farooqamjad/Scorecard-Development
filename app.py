@@ -32,26 +32,21 @@ logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
 
 import streamlit_authenticator as stauth 
-import bcrypt
+
 import importlib.metadata
 
 st.write("streamlit-authenticator version:", importlib.metadata.version("streamlit-authenticator"))
 
 
-hashed_passwords = stauth.Hasher(["Delta007"]).generate()
-# print(hashed_passwords)   # uncomment locally to see hash
-
-# ✅ Store only the hashed password
 credentials = {
     "usernames": {
         "Farooq": {
             "name": "Farooq Amjad",
-            "password": hashed_passwords[0]
+            "password": "$2b$12$18mdpASVj6aeVtC9.etdGeEhWRnHmNFZraeUGOuZkWXPEa16EEx8S"
         }
     }
 }
 
-# Authenticator
 authenticator = stauth.Authenticate(
     credentials,
     "Scorecard-Development",   # app name
@@ -59,7 +54,6 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# 🔐 Login (location must be 'main', 'sidebar' or 'unrendered')
 st.title("🔐 Login")
 name, authentication_status, username = authenticator.login("main")
 
