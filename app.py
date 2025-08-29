@@ -740,12 +740,14 @@ if menu == "🧰 Data Preparation":
                                         st.session_state.cdata[new_var_name] = st.session_state.cdata.apply(assign_bin, axis=1)
                                         st.session_state.created_variables[new_var_name] = st.session_state.cdata[new_var_name]
 
-                                        # ✅ Sync final aligned data
+                                        # ✅ Sync everywhere
                                         st.session_state.cdata_aligned = st.session_state.cdata.copy()
+                                        st.session_state.cdata_cleaned = st.session_state.cdata.copy()
 
                                         if "source_mapping" not in st.session_state:
                                             st.session_state.source_mapping = {}
                                         st.session_state.source_mapping[new_var_name] = [categorical_col, numeric_col]
+
                                         st.success(f"Custom variable '{new_var_name}' created!")
                                         st.session_state.show_custom_var_ui = False
                             with col2:
