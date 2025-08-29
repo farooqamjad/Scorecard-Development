@@ -1232,7 +1232,7 @@ elif menu == "🎯 Variables Selection":
                 vif_data = vif_data.sort_values(by="VIF", ascending=False).reset_index(drop=True)
                 vif_data.index = vif_data.index + 1
 
-                return vif_data            
+                return vif_data
             style_expander_header()
             with st.expander("🧮 VIF & Correlation Analysis", expanded=st.session_state.vif_expander_open):
 
