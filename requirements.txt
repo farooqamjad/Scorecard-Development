@@ -16,3 +16,5 @@ plotly
 bcrypt
 XlsxWriter
 importlib-metadata
+ydata-profiling
+streamlit-pandas-profiling

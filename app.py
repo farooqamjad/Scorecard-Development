@@ -26,6 +26,7 @@ from scipy.stats import binomtest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.metrics import mutual_info_score
 import plotly.express as px
+from ydata_profiling import ProfileReport
 from streamlit_extras.customize_running import center_running
 import plotly.graph_objects as go
 logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
@@ -783,6 +784,24 @@ if menu == "🧰 Data Preparation":
 
                         if st.session_state.removed_derived_vars:
                             st.success(f"🚮 Variables Removed : {', '.join(removed)}")
+
+
+
+                if "cdata" in st.session_state and not st.session_state.cdata.empty:
+                    with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
+                        if "cdata" in st.session_state and not st.session_state.cdata.empty:
+                            if st.button("🔍 Generate EDA Report"):
+                                profile = ProfileReport(st.session_state.cdata, title="📊 Automated EDA Report", explorative=True)
+                                profile.to_file("eda_report.html")
+                                st.success("✅ Report Generated!")
+
+                                # Show inside app (as HTML)
+                                with open("eda_report.html", "r", encoding="utf-8") as f:
+                                    st.components.v1.html(f.read(), height=800, scrolling=True)
+
+                                # Download
+                                with open("eda_report.html", "rb") as f:
+                                    st.download_button("💾 Download Report", f, "eda_report.html", "text/html")
 
                 st.session_state.missing_expander_open = st.session_state.get("remove_missing_vars_expander", False)
 
