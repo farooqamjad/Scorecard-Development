@@ -80,12 +80,15 @@ def require_login():
             margin: 100px auto;
             padding: 2rem;
             border-radius: 18px;
-            background: linear-gradient(135deg, #e0f7fa, #c8e6c9);
+            background: linear-gradient(270deg, #e0f7fa, #c8e6c9, #b2dfdb, #a5d6a7);
+            background-size: 600% 600%;
+            animation: gradientMove 12s ease infinite;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             text-align: center;
             font-family: 'Segoe UI', sans-serif;
             animation: fadeIn 0.8s ease-in-out;
         }
+
         .login-title {
             font-size: 30px;
             font-weight: 700;
@@ -114,9 +117,17 @@ def require_login():
             background: #004d40;
             transform: scale(1.05);
         }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ✅ Gradient move animation */
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         </style>
         """,
