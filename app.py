@@ -34,6 +34,7 @@ warnings.filterwarnings("ignore")
 import streamlit_authenticator as stauth
 import importlib.metadata
 import sweetviz as sv
+import threading
 
 
 FIXED_PASSWORD = "Delta007"
