@@ -789,19 +789,24 @@ if menu == "🧰 Data Preparation":
 
                 if "cdata" in st.session_state and not st.session_state.cdata.empty:
                     with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
-                        if "cdata" in st.session_state and not st.session_state.cdata.empty:
-                            if st.button("🔍 Generate EDA Report"):
-                                profile = ProfileReport(st.session_state.cdata, title="📊 Automated EDA Report", explorative=True)
+                        if st.button("🔍 Generate EDA Report"):
+                            with st.spinner("Generating report..."):
+                                profile = ProfileReport(
+                                    st.session_state.cdata,
+                                    title="📊 Automated EDA Report",
+                                    explorative=True
+                                )
                                 profile.to_file("eda_report.html")
                                 st.success("✅ Report Generated!")
 
-                                # Show inside app (as HTML)
-                                with open("eda_report.html", "r", encoding="utf-8") as f:
-                                    st.components.v1.html(f.read(), height=800, scrolling=True)
-
-                                # Download
+                                # Download button only
                                 with open("eda_report.html", "rb") as f:
-                                    st.download_button("💾 Download Report", f, "eda_report.html", "text/html")
+                                    st.download_button(
+                                        "💾 Download Report",
+                                        f,
+                                        "eda_report.html",
+                                        "text/html"
+                                    )
 
                 st.session_state.missing_expander_open = st.session_state.get("remove_missing_vars_expander", False)
 
