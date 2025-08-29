@@ -789,35 +789,35 @@ if menu == "🧰 Data Preparation":
 
 
 
-              def generate_report(df):
-                  profile = ProfileReport(
-                      df,
-                      title="📊 Automated EDA Report",
-                      explorative=True
-                  )
-                  profile.to_file("eda_report.html")
-                  st.session_state["eda_ready"] = True
+            def generate_report(df):
+                profile = ProfileReport(
+                    df,
+                    title="📊 Automated EDA Report",
+                    explorative=True
+                )
+                profile.to_file("eda_report.html")
+                st.session_state["eda_ready"] = True
 
-              if "cdata" in st.session_state and not st.session_state.cdata.empty:
-                  with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
-                      
-                      if st.button("🔍 Generate EDA Report"):
-                          st.session_state["eda_ready"] = False
-                          threading.Thread(target=generate_report, args=(st.session_state.cdata,)).start()
-                          st.info("⏳ Report is being generated in background... please wait.")
-                          # Auto refresh every 5 seconds until ready
-                          st_autorefresh(interval=5000, limit=100, key="eda_refresh")
+            if "cdata" in st.session_state and not st.session_state.cdata.empty:
+                with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
+                    
+                    if st.button("🔍 Generate EDA Report"):
+                        st.session_state["eda_ready"] = False
+                        threading.Thread(target=generate_report, args=(st.session_state.cdata,)).start()
+                        st.info("⏳ Report is being generated in background... please wait.")
+                        # Auto refresh every 5 seconds until ready
+                        st_autorefresh(interval=5000, limit=100, key="eda_refresh")
 
-                      # Show download button if ready
-                      if st.session_state.get("eda_ready", False):
-                          st.success("✅ Report Generated!")
-                          with open("eda_report.html", "rb") as f:
-                              st.download_button(
-                                  "💾 Download Report",
-                                  f,
-                                  "eda_report.html",
-                                  "text/html"
-                              )
+                    # Show download button if ready
+                    if st.session_state.get("eda_ready", False):
+                        st.success("✅ Report Generated!")
+                        with open("eda_report.html", "rb") as f:
+                            st.download_button(
+                                "💾 Download Report",
+                                f,
+                                "eda_report.html",
+                                "text/html"
+                            )
 
                 st.session_state.missing_expander_open = st.session_state.get("remove_missing_vars_expander", False)
 
