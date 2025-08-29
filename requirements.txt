@@ -16,5 +16,4 @@ plotly
 bcrypt
 XlsxWriter
 importlib-metadata
-ydata-profiling
-streamlit-pandas-profiling
+ydata-profiling==4.12.0
