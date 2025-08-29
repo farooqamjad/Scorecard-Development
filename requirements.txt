@@ -10,7 +10,6 @@ openpyxl
 matplotlib
 seaborn
 plotly
-bcrypt
 XlsxWriter
 streamlit-authenticator
 streamlit-tags
