@@ -937,7 +937,12 @@ elif menu == "🎯 Variables Selection":
             if st.button("⚙️ Run WOE Transformation", type="primary", key="btn_run_iv"):
                 progress_text = "🔄 Processing WOE Transformation"
                 my_bar = st.progress(0, text=progress_text)
-
+                for col in st.session_state.cdata_aligned.select_dtypes(include=["category", "object"]).columns:
+                    st.session_state.cdata_aligned[col] = (
+                        st.session_state.cdata_aligned[col]
+                        .astype("string")
+                        .fillna("missing")
+                    )
                 bins = {}
                 iv_entries = []
                 breaks_list = {}
