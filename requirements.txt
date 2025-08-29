@@ -1,4 +1,4 @@
---force-reinstall
+--upgrade --force-reinstall
 streamlit
 pandas
 numpy
