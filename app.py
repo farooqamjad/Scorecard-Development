@@ -1888,16 +1888,16 @@ if menu == "🛠️ Scorecard Development":
             tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
             return tbf
 
-            if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
-                with st.expander("📐 Model Calibration", expanded=False):
-                    st.subheader("📊 Binning Analysis")
+        if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
+            with st.expander("📐 Model Calibration", expanded=False):
+                st.subheader("📊 Binning Analysis")
 
-                    num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
-                    min_score = st.number_input("Minimum Score (optional, leave default for auto)", value=float(scores["score"].min()))
-                    max_score = st.number_input("Maximum Score (optional, leave default for auto)", value=float(scores["score"].max()))
+                num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
+                min_score = st.number_input("Minimum Score (optional, leave default for auto)", value=float(scores["score"].min()))
+                max_score = st.number_input("Maximum Score (optional, leave default for auto)", value=float(scores["score"].max()))
 
-                    if st.button("Generate Binning Table"):
-                        pd_train = glm_fit.predict(sm.add_constant(cdata_woe.drop(columns=['target'])))
-                        tb_train = tb_func_dynamic(scores, cdata_filtered['target'].astype(int), pd_train,
-                                                  num_bins=num_bins, min_score=min_score, max_score=max_score)
-                        st.dataframe(tb_train, use_container_width=True)
+                if st.button("Generate Binning Table"):
+                    pd_train = glm_fit.predict(sm.add_constant(cdata_woe.drop(columns=['target'])))
+                    tb_train = tb_func_dynamic(scores, cdata_filtered['target'].astype(int), pd_train,
+                                              num_bins=num_bins, min_score=min_score, max_score=max_score)
+                    st.dataframe(tb_train, use_container_width=True)
