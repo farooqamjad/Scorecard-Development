@@ -26,7 +26,6 @@ from scipy.stats import binomtest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.metrics import mutual_info_score
 import plotly.express as px
-from ydata_profiling import ProfileReport
 from streamlit_extras.customize_running import center_running
 import plotly.graph_objects as go
 logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
