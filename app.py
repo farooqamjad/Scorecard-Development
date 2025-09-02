@@ -794,13 +794,13 @@ if menu == "🧰 Data Preparation":
 
             if "cdata" in st.session_state and not st.session_state.cdata.empty:
                 with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
-                    
+
                     if st.button("🔍 Generate EDA Report"):
                         st.session_state["eda_ready"] = False
                         # Background me run karne ke liye
                         threading.Thread(target=generate_sweetviz_report, args=(st.session_state.cdata,)).start()
                         st.info("⏳ Report is being generated in background... please wait.")
-                    
+
                     if st.session_state.get("eda_ready", False):
                         st.success("✅ Report Generated!")
                         with open("eda_report.html", "rb") as f:
