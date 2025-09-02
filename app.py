@@ -32,14 +32,11 @@ logging.getLogger("scorecardpy").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
 import streamlit_authenticator as stauth
 import importlib.metadata
-import sweetviz as sv
-import threading
 
 
 FIXED_PASSWORD = "Delta007"
 
 def require_login():
-    # Already logged in → show sidebar logout
     if st.session_state.get("auth", False):
         with st.sidebar:
             st.markdown(
@@ -73,7 +70,6 @@ def require_login():
                 st.rerun()
         return
 
-    # --- Login card ---
     st.markdown(
         """
         <style>
@@ -136,7 +132,6 @@ def require_login():
         unsafe_allow_html=True,
     )
 
-    # --- Login form ---
     with st.form("login_form", clear_on_submit=False):
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown('<div class="login-title">🔐 Secure Login</div>', unsafe_allow_html=True)
@@ -148,7 +143,6 @@ def require_login():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Check login ---
     if submitted:
         if password == FIXED_PASSWORD:
             st.session_state.auth = True
@@ -158,14 +152,8 @@ def require_login():
         else:
             st.error("❌ Password is incorrect")
             st.stop()
-
-    # 🚨 Block rest of app until logged in
     st.stop()
 
-
-# -----------------------------------------------------------------------------
-# 🔐 Require login before continuing
-# -----------------------------------------------------------------------------
 require_login()
 
 st.markdown("""
@@ -683,7 +671,6 @@ if menu == "🧰 Data Preparation":
                                     min_val = subset[numeric_col].min()
                                     max_val = subset[numeric_col].max()
 
-                                    # Number of bins (default)
                                     num_bins = st.number_input(
                                         f"How many bins for '{cat}'?",
                                         min_value=1, max_value=10, value=1, step=1,
@@ -742,7 +729,6 @@ if menu == "🧰 Data Preparation":
                                         st.session_state.cdata[new_var_name] = st.session_state.cdata.apply(assign_bin, axis=1)
                                         st.session_state.created_variables[new_var_name] = st.session_state.cdata[new_var_name]
 
-                                        # ✅ Sync everywhere
                                         st.session_state.cdata_aligned = st.session_state.cdata.copy()
                                         st.session_state.cdata_cleaned = st.session_state.cdata.copy()
 
@@ -786,30 +772,6 @@ if menu == "🧰 Data Preparation":
                         if st.session_state.removed_derived_vars:
                             st.success(f"🚮 Variables Removed : {', '.join(removed)}")
 
-            def generate_sweetviz_report(df):
-                report = sv.analyze(df)
-                report.show_html("eda_report.html")
-                st.session_state["eda_ready"] = True
-
-            if "cdata" in st.session_state and not st.session_state.cdata.empty:
-                with st.expander("📊 Exploratory Data Analysis (EDA)", expanded=False):
-
-                    if st.button("🔍 Generate EDA Report"):
-                        st.session_state["eda_ready"] = False
-                        # Background me run karne ke liye
-                        threading.Thread(target=generate_sweetviz_report, args=(st.session_state.cdata,)).start()
-                        st.info("⏳ Report is being generated in background... please wait.")
-
-                    if st.session_state.get("eda_ready", False):
-                        st.success("✅ Report Generated!")
-                        with open("eda_report.html", "rb") as f:
-                            st.download_button(
-                                "💾 Download Report",
-                                f,
-                                "eda_report.html",
-                                "text/html"
-                            )
-
                 st.session_state.missing_expander_open = st.session_state.get("remove_missing_vars_expander", False)
 
                 if "missing_expander_open" not in st.session_state:
@@ -819,7 +781,6 @@ if menu == "🧰 Data Preparation":
                     if "cdata_cleaned" not in st.session_state:
                         st.session_state.cdata_cleaned = st.session_state.get("cdata", pd.DataFrame()).copy()
 
-                    # Threshold input
                     threshold = st.number_input(
                         "Allowed Missing % Threshold",
                         min_value=0.0, max_value=100.0, value=10.0, step=0.1,
@@ -1266,7 +1227,6 @@ elif menu == "🎯 Variables Selection":
                                 iv_df = st.session_state.woe_iv_result[1]
                                 iv_map = dict(zip(iv_df["Variable"], iv_df["Information Value"]))
 
-                                # ✅ Use cached calculation
                                 st.session_state.vif_data = calculate_vif_cached(df_for_vif, iv_map)
                                 st.session_state.df_for_vif = df_for_vif
                                 st.session_state.iv_map = iv_map
@@ -1280,7 +1240,6 @@ elif menu == "🎯 Variables Selection":
                             value=st.session_state.get("show_corr", False)
                         )
 
-                    # 🔹 Display VIF Results
                     if st.session_state.vif_data is not None:
                         vif_df = st.session_state.vif_data.copy()
 
@@ -1303,7 +1262,6 @@ elif menu == "🎯 Variables Selection":
                             if st.button("♻️ Recalculate VIF after Removal", key="btn_recalc_vif"):
                                 rem_vars = st.session_state.get("rem_vif_vars", [])
 
-                                # ✅ Remove from datasets
                                 st.session_state.final_woe_data = st.session_state.final_woe_data.drop(
                                     columns=[v + "_woe" if v + "_woe" in st.session_state.final_woe_data.columns else v
                                             for v in rem_vars],
@@ -1313,7 +1271,6 @@ elif menu == "🎯 Variables Selection":
 
                                 st.success(f"✅ Removed {len(rem_vars)} variable(s): {', '.join(rem_vars) if rem_vars else 'None'}")
 
-                                # ✅ Recalculate VIF again with cache
                                 df_for_vif = st.session_state.final_woe_data.drop(columns=["target"], errors="ignore")
                                 df_for_vif.rename(columns=lambda x: x.replace("_woe", "") if "_woe" in x else x, inplace=True)
                                 df_for_vif = df_for_vif.replace([np.inf, -np.inf], np.nan).dropna()
@@ -1322,7 +1279,6 @@ elif menu == "🎯 Variables Selection":
                                 st.session_state.df_for_vif = df_for_vif
                                 st.session_state.vif_expander_open = True
 
-                                # ✅ Ye line add karo
                                 st.session_state.vif_removal_triggered = True
 
                                 st.rerun()
@@ -1887,3 +1843,17 @@ if menu == "🛠️ Scorecard Development":
                         st.plotly_chart(fig, use_container_width=True)
 
                     st.success("✅ Scorecard Developed Successfully!")
+
+                    target_numeric = cdata['target'].cat.codes if hasattr(cdata['target'], 'cat') else cdata['target'].astype(int)
+                    bp = target_numeric.mean()
+                    basepoints_value = card['basepoints'].loc[0, 'points']
+                    adjusted_baseline_score = (np.log(bp / (1 - bp)) * 20 / np.log(2)) + basepoints_value
+
+                    min_score = scores["score"].min()
+                    max_score = scores["score"].max()
+
+                    # Show in one line
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("⚖️ Adjusted Baseline Score", f"{adjusted_baseline_score:.2f}")
+                    col2.metric("⬇️ Minimum Score", f"{min_score:.2f}")
+                    col3.metric("⬆️ Maximum Score", f"{max_score:.2f}")
