@@ -1858,3 +1858,46 @@ if menu == "🛠️ Scorecard Development":
 
                     st.success("✅ Scorecard Developed Successfully!")
 
+        def tb_func_dynamic(scores, labels, pred_probs, num_bins=10, min_score=None, max_score=None):
+            tb = pd.DataFrame({
+                'score': scores['score'],
+                'pd': pred_probs,
+                'target': labels.astype(int)
+            })
+
+            # Auto set min/max if not provided
+            if min_score is None:
+                min_score = tb['score'].min()
+            if max_score is None:
+                max_score = tb['score'].max()
+
+            # Create bin edges dynamically
+            bin_edges = np.linspace(min_score, max_score, num_bins + 1)
+            tb['Bins'] = pd.cut(tb['score'], bins=bin_edges, include_lowest=True)
+
+            # Group and calculate stats
+            tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+            bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+            minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
+            maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
+
+            tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
+            tbf['Goods'] = tbf['Total'] - tbf['Bads']
+            tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
+
+            tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+            return tbf
+
+            if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
+                with st.expander("📐 Model Calibration", expanded=False):
+                    st.subheader("📊 Binning Analysis")
+
+                    num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
+                    min_score = st.number_input("Minimum Score (optional, leave default for auto)", value=float(scores["score"].min()))
+                    max_score = st.number_input("Maximum Score (optional, leave default for auto)", value=float(scores["score"].max()))
+
+                    if st.button("Generate Binning Table"):
+                        pd_train = glm_fit.predict(sm.add_constant(cdata_woe.drop(columns=['target'])))
+                        tb_train = tb_func_dynamic(scores, cdata_filtered['target'].astype(int), pd_train,
+                                                  num_bins=num_bins, min_score=min_score, max_score=max_score)
+                        st.dataframe(tb_train, use_container_width=True)
