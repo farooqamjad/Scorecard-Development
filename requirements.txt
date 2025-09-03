@@ -14,4 +14,3 @@ XlsxWriter
 streamlit-authenticator
 streamlit-tags
 streamlit-extras
-sweetviz
