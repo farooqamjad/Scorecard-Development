@@ -1977,8 +1977,8 @@ if menu == "🛠️ Scorecard Development":
 
             st.subheader("📂 Select Columns for Model Input")
 
-            if "cdata" in st.session_state and not st.session_state.cdata.empty:
-                df = st.session_state.cdata.copy()
+            if "original_data" in st.session_state and not st.session_state.original_data.empty:
+                df = st.session_state.original_data.copy()
 
                 st.markdown("""
                 ⚠️ **Important:** Please select the following columns in this exact order:  
@@ -1988,7 +1988,6 @@ if menu == "🛠️ Scorecard Development":
                 4️⃣ Target Variable  
                 """)
 
-                # Multi-select with enforced 4 columns
                 selected_cols = st.multiselect(
                     "Select 4 columns in order (Loan Number, Limit, M+6, Target):",
                     options=df.columns.tolist(),
@@ -1998,7 +1997,6 @@ if menu == "🛠️ Scorecard Development":
                 if len(selected_cols) != 4:
                     st.warning("⚠️ Please select exactly 4 columns in the correct order.")
                 else:
-                    # Create xdt dataframe
                     xdt1 = df[selected_cols].copy()
                     xdt1['score'] = st.session_state.scores['score']
                     xdt1['pd'] = st.session_state.glm_fit.predict(
@@ -2007,7 +2005,5 @@ if menu == "🛠️ Scorecard Development":
 
                     st.session_state.xdt = xdt1
                     st.success("✅ Dataframe `xdt` created successfully!")
-
-                    # Show preview
                     st.write("📊 Preview of `xdt`")
                     st.dataframe(xdt1.head(), use_container_width=True)
