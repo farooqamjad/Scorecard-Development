@@ -1865,17 +1865,19 @@ if menu == "🛠️ Scorecard Development":
                 'target': labels.astype(int)
             })
 
-            # Auto set min/max if not provided
+            # Agar user custom min/max de to use karein warna auto
             if min_score is None:
                 min_score = tb['score'].min()
             if max_score is None:
                 max_score = tb['score'].max()
 
-            # Create bin edges dynamically
+            # Create bin edges dynamically (equal-width bins)
             bin_edges = np.linspace(min_score, max_score, num_bins + 1)
+
+            # Assign bins
             tb['Bins'] = pd.cut(tb['score'], bins=bin_edges, include_lowest=True)
 
-            # Group and calculate stats
+            # Aggregate stats
             tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
             bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
             minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
@@ -1892,12 +1894,53 @@ if menu == "🛠️ Scorecard Development":
             with st.expander("📐 Model Calibration", expanded=False):
                 st.subheader("📊 Binning Analysis")
 
+                # Step 1: Number of bins choose kare
                 num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
-                min_score = st.number_input("Minimum Score (optional, leave default for auto)", value=float(scores["score"].min()))
-                max_score = st.number_input("Maximum Score (optional, leave default for auto)", value=float(scores["score"].max()))
 
-                if st.button("Generate Binning Table"):
-                    pd_train = glm_fit.predict(sm.add_constant(cdata_woe.drop(columns=['target'])))
-                    tb_train = tb_func_dynamic(scores, cdata_filtered['target'].astype(int), pd_train,
-                                              num_bins=num_bins, min_score=min_score, max_score=max_score)
-                    st.dataframe(tb_train, use_container_width=True)
+                # Step 2: Auto-generate bin edges (equal-width)
+                min_score = scores['score'].min()
+                max_score = scores['score'].max()
+                auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
+
+                st.markdown("### ✂️ Adjust Bin Breaks")
+                user_breaks = st.text_area(
+                    "Enter bin edges (comma separated):",
+                    value=", ".join([str(round(x, 2)) for x in auto_breaks])
+                )
+
+                # Step 3: Parse user input breaks
+                try:
+                    breaks = [float(x.strip()) for x in user_breaks.split(",")]
+                    breaks = sorted(list(set(breaks)))  # remove duplicates, sort
+                except:
+                    st.error("⚠️ Please enter valid numeric breaks separated by commas.")
+                    breaks = auto_breaks
+
+                if len(breaks) < 2:
+                    st.error("⚠️ At least 2 breaks are required.")
+                else:
+                    st.write(f"📌 Final Bin Edges: {breaks}")
+
+                    if st.button("Generate Binning Table"):
+                        pd_train = glm_fit.predict(sm.add_constant(
+                            st.session_state.final_cdata_woe.drop(columns=['target'])
+                        ))
+
+                        tb = pd.DataFrame({
+                            'score': scores['score'],
+                            'pd': pd_train,
+                            'target': st.session_state.cdata_filtered['target'].astype(int)
+                        })
+
+                        tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
+
+                        tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+                        bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+                        minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
+                        maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
+
+                        tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
+                        tbf['Goods'] = tbf['Total'] - tbf['Bads']
+                        tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
+
+                        st.dataframe(tbf, use_container_width=True)
