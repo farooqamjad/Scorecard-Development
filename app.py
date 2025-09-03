@@ -1925,11 +1925,6 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) < 2:
                     st.error("⚠️ At least 2 breaks are required.")
                 else:
-                    # Show bin ranges nicely
-                    break_pairs = [f"[{breaks[i]}, {breaks[i+1]}]" for i in range(len(breaks)-1)]
-                    st.write("📊 **Final Bin Ranges:**")
-                    st.table(pd.DataFrame({"Bins": break_pairs}))
-
                     if st.button("Generate Binning Table"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
@@ -1943,8 +1938,6 @@ if menu == "🛠️ Scorecard Development":
 
                         # Assign bins
                         tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
-
-                        # Convert Interval to string format
                         tb['Bins'] = tb['Bins'].astype(str)
 
                         # Aggregations
@@ -1958,6 +1951,10 @@ if menu == "🛠️ Scorecard Development":
                         tbf['Goods'] = tbf['Total'] - tbf['Bads']
                         tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-                        # Final ordered table
+                        # Add S.No column
                         tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+                        tbf.reset_index(drop=True, inplace=True)
+                        tbf.index = tbf.index + 1
+                        tbf.index.name = "S.No"
+
                         st.dataframe(tbf, use_container_width=True)
