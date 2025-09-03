@@ -1894,24 +1894,31 @@ if menu == "🛠️ Scorecard Development":
             with st.expander("📐 Model Calibration", expanded=False):
                 st.subheader("📊 Binning Analysis")
 
-                # Step 1: Number of bins choose kare
-                num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
+                # Step 1: User selects number of bins
+                num_bins = st.number_input(
+                    "Number of Bins", 
+                    min_value=3, 
+                    max_value=20, 
+                    value=10, 
+                    step=1
+                )
 
                 # Step 2: Auto-generate bin edges (equal-width)
                 min_score = st.session_state.scores['score'].min()
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
+                # Step 3: User adjustment option
                 st.markdown("### ✂️ Adjust Bin Breaks")
                 user_breaks = st.text_area(
                     "Enter bin edges (comma separated):",
                     value=", ".join([str(round(x, 2)) for x in auto_breaks])
                 )
 
-                # Step 3: Parse user input breaks
+                # Step 4: Parse user input breaks
                 try:
                     breaks = [float(x.strip()) for x in user_breaks.split(",")]
-                    breaks = sorted(list(set(breaks)))  # remove duplicates, sort
+                    breaks = sorted(list(set(breaks)))  # remove duplicates + sort
                 except:
                     st.error("⚠️ Please enter valid numeric breaks separated by commas.")
                     breaks = auto_breaks
@@ -1919,14 +1926,12 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) < 2:
                     st.error("⚠️ At least 2 breaks are required.")
                 else:
-                    # 📌 Breaks ko table form me show karna
-                    break_pairs = []
-                    for i in range(len(breaks) - 1):
-                        break_pairs.append(f"[{breaks[i]}, {breaks[i+1]}]")
-
+                    # Show breaks table
+                    break_pairs = [f"[{breaks[i]}, {breaks[i+1]}]" for i in range(len(breaks) - 1)]
                     st.write("📊 **Final Bin Ranges:**")
                     st.table(pd.DataFrame({"Bins": break_pairs}))
 
+                    # Step 5: Generate binning table
                     if st.button("Generate Binning Table"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
@@ -1938,17 +1943,21 @@ if menu == "🛠️ Scorecard Development":
                             'target': st.session_state.cdata_filtered['target'].astype(int)
                         })
 
+                        # Assign bins
                         tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
 
-                        tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
-                        bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+                        # Aggregations
+                        tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+                        bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
                         minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
                         maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
+                        # Merge all stats
                         tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
                         tbf['Goods'] = tbf['Total'] - tbf['Bads']
                         tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-                        # Reset index and display
+                        # Final ordered table
                         tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+
                         st.dataframe(tbf, use_container_width=True)
