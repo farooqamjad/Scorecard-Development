@@ -2007,3 +2007,42 @@ if menu == "🛠️ Scorecard Development":
                     st.success("✅ Dataframe `xdt` created successfully!")
                     st.write("📊 Preview of `xdt`")
                     st.dataframe(xdt1.head(), use_container_width=True)
+
+            if "binning_table" in st.session_state:  # ensure bins already created
+                breaks = st.session_state.final_breaks  # jo user ne adjust kiye the
+                tb = st.session_state.binning_table     # jo aapne display kiya tha
+
+                # Rating mapping: highest bin = 1, lowest bin = 6 (ya jitna bins hain)
+                bin_labels = list(range(len(breaks)-1, 0, -1))  
+                # Example: agar 9 breaks hain → labels = [9,8,7,6,5,4,3,2,1]
+
+                # Use pd.cut to assign rating based on score bins
+                xdt['bin_rating'] = pd.cut(
+                    xdt['score'],
+                    bins=breaks,
+                    labels=bin_labels,
+                    include_lowest=True
+                ).astype(float)
+
+                # Now combine with m+6 rules
+                xdft2 = (
+                    xdt
+                    .rename(columns=lambda c: c.lower())
+                    .dropna(subset=['m+6'])
+                    .assign(
+                        rating=lambda df: np.select(
+                            [
+                                df['m+6'] >= 89,
+                                df['m+6'] == 59,
+                                df['m+6'] == 29,
+                            ],
+                            [9, 8, 7],
+                            default=df['bin_rating']  # fallback → score-based bin rating
+                        )
+                    )
+                    .loc[lambda df: df['rating'] <= 6]   # filter ratings ≤ 6 only
+                )
+
+                st.session_state.xdft2 = xdft2
+                st.success("✅ Rating assigned based on Final Binning Table + m+6 rules")
+                st.dataframe(xdft2.head(), use_container_width=True)
