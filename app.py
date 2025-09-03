@@ -1894,7 +1894,7 @@ if menu == "🛠️ Scorecard Development":
             with st.expander("📐 Model Calibration", expanded=False):
                 st.subheader("📊 Binning Analysis")
 
-                # Step 1: User selects number of bins
+                # Step 1: Number of bins
                 num_bins = st.number_input(
                     "Number of Bins", 
                     min_value=3, 
@@ -1903,22 +1903,21 @@ if menu == "🛠️ Scorecard Development":
                     step=1
                 )
 
-                # Step 2: Auto-generate bin edges (equal-width)
+                # Step 2: Auto bin edges
                 min_score = st.session_state.scores['score'].min()
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 3: User adjustment option
                 st.markdown("### ✂️ Adjust Bin Breaks")
                 user_breaks = st.text_area(
                     "Enter bin edges (comma separated):",
                     value=", ".join([str(round(x, 2)) for x in auto_breaks])
                 )
 
-                # Step 4: Parse user input breaks
+                # Step 3: Parse user breaks
                 try:
                     breaks = [float(x.strip()) for x in user_breaks.split(",")]
-                    breaks = sorted(list(set(breaks)))  # remove duplicates + sort
+                    breaks = sorted(list(set(breaks)))
                 except:
                     st.error("⚠️ Please enter valid numeric breaks separated by commas.")
                     breaks = auto_breaks
@@ -1926,12 +1925,11 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) < 2:
                     st.error("⚠️ At least 2 breaks are required.")
                 else:
-                    # Show breaks table
-                    break_pairs = [f"[{breaks[i]}, {breaks[i+1]}]" for i in range(len(breaks) - 1)]
+                    # Show bin ranges nicely
+                    break_pairs = [f"[{breaks[i]}, {breaks[i+1]}]" for i in range(len(breaks)-1)]
                     st.write("📊 **Final Bin Ranges:**")
                     st.table(pd.DataFrame({"Bins": break_pairs}))
 
-                    # Step 5: Generate binning table
                     if st.button("Generate Binning Table"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
@@ -1946,18 +1944,20 @@ if menu == "🛠️ Scorecard Development":
                         # Assign bins
                         tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
 
+                        # Convert Interval to string format
+                        tb['Bins'] = tb['Bins'].astype(str)
+
                         # Aggregations
                         tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
                         bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
                         minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
                         maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
-                        # Merge all stats
+                        # Merge
                         tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
                         tbf['Goods'] = tbf['Total'] - tbf['Bads']
                         tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
                         # Final ordered table
                         tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
-
                         st.dataframe(tbf, use_container_width=True)
