@@ -1974,3 +1974,40 @@ if menu == "🛠️ Scorecard Development":
                             xaxis_tickangle=-45
                         )
                         st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("📂 Select Columns for Model Input")
+
+            if "cdata" in st.session_state and not st.session_state.cdata.empty:
+                df = st.session_state.cdata.copy()
+
+                st.markdown("""
+                ⚠️ **Important:** Please select the following columns in this exact order:  
+                1️⃣ Loan Number (Unique ID)  
+                2️⃣ Limit  
+                3️⃣ M+6 (Observation Window column)  
+                4️⃣ Target Variable  
+                """)
+
+                # Multi-select with enforced 4 columns
+                selected_cols = st.multiselect(
+                    "Select 4 columns in order (Loan Number, Limit, M+6, Target):",
+                    options=df.columns.tolist(),
+                    default=None
+                )
+
+                if len(selected_cols) != 4:
+                    st.warning("⚠️ Please select exactly 4 columns in the correct order.")
+                else:
+                    # Create xdt dataframe
+                    xdt1 = df[selected_cols].copy()
+                    xdt1['score'] = st.session_state.scores['score']
+                    xdt1['pd'] = st.session_state.glm_fit.predict(
+                        sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                    )
+
+                    st.session_state.xdt = xdt1
+                    st.success("✅ Dataframe `xdt` created successfully!")
+
+                    # Show preview
+                    st.write("📊 Preview of `xdt`")
+                    st.dataframe(xdt1.head(), use_container_width=True)
