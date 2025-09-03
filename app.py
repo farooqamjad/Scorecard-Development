@@ -1898,8 +1898,8 @@ if menu == "🛠️ Scorecard Development":
                 num_bins = st.number_input("Number of Bins", min_value=3, max_value=20, value=10, step=1)
 
                 # Step 2: Auto-generate bin edges (equal-width)
-                min_score = scores['score'].min()
-                max_score = scores['score'].max()
+                min_score = st.session_state.scores['score'].min()
+                max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
                 st.markdown("### ✂️ Adjust Bin Breaks")
@@ -1919,15 +1919,21 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) < 2:
                     st.error("⚠️ At least 2 breaks are required.")
                 else:
-                    st.write(f"📌 Final Bin Edges: {breaks}")
+                    # 📌 Breaks ko table form me show karna
+                    break_pairs = []
+                    for i in range(len(breaks) - 1):
+                        break_pairs.append(f"[{breaks[i]}, {breaks[i+1]}]")
+
+                    st.write("📊 **Final Bin Ranges:**")
+                    st.table(pd.DataFrame({"Bins": break_pairs}))
 
                     if st.button("Generate Binning Table"):
-                        pd_train = glm_fit.predict(sm.add_constant(
-                            st.session_state.final_cdata_woe.drop(columns=['target'])
-                        ))
+                        pd_train = st.session_state.glm_fit.predict(
+                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                        )
 
                         tb = pd.DataFrame({
-                            'score': scores['score'],
+                            'score': st.session_state.scores['score'],
                             'pd': pd_train,
                             'target': st.session_state.cdata_filtered['target'].astype(int)
                         })
@@ -1943,4 +1949,6 @@ if menu == "🛠️ Scorecard Development":
                         tbf['Goods'] = tbf['Total'] - tbf['Bads']
                         tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
+                        # Reset index and display
+                        tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
                         st.dataframe(tbf, use_container_width=True)
