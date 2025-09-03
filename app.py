@@ -1957,4 +1957,20 @@ if menu == "🛠️ Scorecard Development":
                         tbf.index = tbf.index + 1
                         tbf.index.name = "S.No"
 
+                        # Show table
                         st.dataframe(tbf, use_container_width=True)
+
+                        # 📈 Line chart Total vs Bins
+                        fig = px.line(
+                            tbf, 
+                            x="Bins", 
+                            y="Total", 
+                            markers=True,
+                            title="📈 Total Count per Bin"
+                        )
+                        fig.update_layout(
+                            xaxis_title="Bins (Score Ranges)",
+                            yaxis_title="Total Count",
+                            xaxis_tickangle=-45
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
