@@ -2007,6 +2007,8 @@ if menu == "🛠️ Scorecard Development":
                     st.warning("⚠️ Please select exactly 4 columns in the correct order.")
                 else:
                     xdt1 = df[selected_cols].copy()
+                    xdt1 = xdt1.rename(columns={selected_cols[3]: "target"})  # ✅ rename last col to target
+
                     xdt1['score'] = st.session_state.scores['score']
                     xdt1['pd'] = st.session_state.glm_fit.predict(
                         sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
