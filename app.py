@@ -2029,6 +2029,7 @@ if menu == "🛠️ Scorecard Development":
 
             bin_labels = list(range(len(breaks)-1, 0, -1))  
 
+            # Temporary bin rating
             xdt['bin_rating'] = pd.cut(
                 xdt['score'],
                 bins=breaks,
@@ -2036,6 +2037,7 @@ if menu == "🛠️ Scorecard Development":
                 include_lowest=True
             ).astype(float)
 
+            # Final dataframe with single `rating`
             xdft2 = (
                 xdt
                 .rename(columns=lambda c: c.lower())
@@ -2051,9 +2053,10 @@ if menu == "🛠️ Scorecard Development":
                         default=df['bin_rating']
                     )
                 )
+                .drop(columns=['bin_rating'])   # ✅ remove extra column
                 .loc[lambda df: df['rating'] <= 6]
             )
 
             st.session_state.xdft2 = xdft2
             st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
-            st.dataframe(xdft2, use_container_width=True)
+            st.dataframe(xdft2.head(), use_container_width=True)
