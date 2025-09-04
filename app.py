@@ -2007,7 +2007,10 @@ if menu == "🛠️ Scorecard Development":
                     )
 
                     st.session_state.xdt = xdt1
+                    st.session_state.selected_cols = selected_cols  # ✅ save here
+
                     st.success("✅ Dataframe `xdt` created successfully!")
+                    st.write("📊 Preview of `xdt`")
                     st.dataframe(xdt1.head(), use_container_width=True)
 
         if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
