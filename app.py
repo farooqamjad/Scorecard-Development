@@ -2060,3 +2060,43 @@ if menu == "🛠️ Scorecard Development":
             st.session_state.xdft2 = xdft2
             st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
             st.dataframe(xdft2.head(), use_container_width=True)
+
+        if "xdft2" in st.session_state:
+            xdft2 = st.session_state.xdft2.copy()
+
+            # ✅ Rename target column (ensure 4th col is target)
+            xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
+
+            # Aggregations
+            a = xdft2.groupby('rating', as_index=False)['target'].count()
+            b = xdft2.groupby('rating', as_index=False)['limit'].sum()
+
+            f = pd.merge(a, b, on='rating')
+
+            # Distributions
+            f['count_distr'] = (f['target'] / f['target'].sum()) * 100
+            f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
+
+            # Format numbers
+            f['limit'] = f['limit'].round(0).astype(int)
+            f['limit'] = f['limit'].map('{:,}'.format)
+            f['count_distr'] = f['count_distr'].round(2)
+            f['limit_distr'] = f['limit_distr'].round(2)
+
+            # ✅ UI Display
+            st.subheader("📊 Rating-wise Distribution")
+            st.dataframe(f, use_container_width=True)
+
+            # ✅ Optional: Bar chart visualization
+            fig = px.bar(
+                f, 
+                x="rating", 
+                y=["count_distr", "limit_distr"], 
+                barmode="group",
+                title="📈 Distribution of Count and Limit by Rating"
+            )
+            fig.update_layout(
+                xaxis_title="Rating",
+                yaxis_title="Distribution (%)"
+            )
+            st.plotly_chart(fig, use_container_width=True)
