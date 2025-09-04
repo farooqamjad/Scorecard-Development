@@ -2156,8 +2156,8 @@ if menu == "🛠️ Scorecard Development":
             table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
 
             # ---------------- Show Tables ----------------
-            print("Table 1 (Counts & Avg PD):")
-            print(table1)
+            st.subheader("📊 Table 1: Counts & Avg PD")
+            st.dataframe(table1, use_container_width=True)
 
-            print("\nTable 2 (Binomial Test):")
-            print(table2)
+            st.subheader("📊 Table 2: Binomial Test Results")
+            st.dataframe(table2, use_container_width=True)
