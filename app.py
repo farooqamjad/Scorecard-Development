@@ -2134,7 +2134,7 @@ if menu == "🛠️ Scorecard Development":
                 table1 = avg_pd.copy()
                 table1['N'] = N
                 table1['D'] = D
-                table1 = table1.sort_values('Ratings').reset_index(drop=True)   # ✅ numbering removed
+                table1 = table1.sort_values('Ratings').reset_index(drop=True)  # ✅ side numbering removed
 
                 # ---------------- Table 2 ----------------
                 pv = []
@@ -2156,7 +2156,7 @@ if menu == "🛠️ Scorecard Development":
                     "p-value": [round(v, 5) for v in pv]
                 })
                 table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
-                table2 = table2.reset_index(drop=True)   # ✅ numbering removed
+                table2 = table2.reset_index(drop=True)   # ✅ side numbering removed
 
                 # ---------------- Show Tables ----------------
                 col1, col2 = st.columns(2)
