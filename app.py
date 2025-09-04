@@ -2100,3 +2100,17 @@ if menu == "🛠️ Scorecard Development":
                 yaxis_title="Distribution (%)"
             )
             st.plotly_chart(fig, use_container_width=True)
+
+        if "xdft2" in st.session_state:
+            xdft2 = st.session_state.xdft2.copy()
+
+            st.subheader("📊 Model Diagnostics")
+
+            if st.button("📌 Calculate Brier Score"):
+                # Brier Score Calculation
+                xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
+                bscore = xdft2['SS'].mean()
+                brier_df = pd.DataFrame({"Brier Score": [round(bscore, 5)]})
+
+                st.success("✅ Brier Score calculated successfully!")
+                st.dataframe(brier_df, use_container_width=True)
