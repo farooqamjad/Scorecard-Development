@@ -1977,8 +1977,6 @@ if menu == "🛠️ Scorecard Development":
                         st.session_state.final_breaks = breaks
                         st.session_state.binning_table = tbf
 
-            st.subheader("📂 Select Columns for Model Input")
-
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
             st.subheader("📂 Select Columns for Model Input")
 
