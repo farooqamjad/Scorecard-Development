@@ -1951,8 +1951,12 @@ if menu == "🛠️ Scorecard Development":
                         tbf['Goods'] = tbf['Total'] - tbf['Bads']
                         tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-                        # Add S.No column
+                        # Reorder columns
                         tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+
+                        # ✅ Sort bins descending (higher score → lower score)
+                        tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
+                        tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
                         tbf.reset_index(drop=True, inplace=True)
                         tbf.index = tbf.index + 1
                         tbf.index.name = "S.No"
@@ -1974,6 +1978,8 @@ if menu == "🛠️ Scorecard Development":
                             xaxis_tickangle=-45
                         )
                         st.plotly_chart(fig, use_container_width=True)
+
+                        # Save in session
                         st.session_state.final_breaks = breaks
                         st.session_state.binning_table = tbf
 
