@@ -2115,3 +2115,38 @@ if menu == "🛠️ Scorecard Development":
 
                 st.success("✅ Brier Score calculated successfully!")
                 st.metric(label="Brier Score", value=round(bscore, 5))
+
+        bt = xdft2.copy()
+
+        # Rating-wise average PD
+        avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
+        avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
+
+        # Counts
+        N = []
+        D = []
+        pvals = []
+        for i in range(1, 7):
+            n = len(bt[bt['rating'] == i])                           # total count
+            d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])   # defaults
+            N.append(n)
+            D.append(d)
+
+            if n > 0:
+                pval = binomtest(d, n, avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]).pvalue
+            else:
+                pval = None
+            pvals.append(pval)
+
+        # Final table
+        tbs = avg_pd.copy()
+        tbs['N'] = N
+        tbs['D'] = D
+        tbs['p_value'] = pvals
+        tbs = tbs.sort_values('Ratings')
+
+        # Round for display
+        tbs['avg_pd'] = tbs['avg_pd'].round(4)
+        tbs['p_value'] = tbs['p_value'].round(5)
+
+        print(tbs)
