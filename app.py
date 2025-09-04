@@ -2015,6 +2015,9 @@ if menu == "🛠️ Scorecard Development":
             breaks = st.session_state.final_breaks
             tb = st.session_state.binning_table
 
+            # Get observation window column dynamically
+            obs_col = st.session_state.selected_cols[2].lower()  # 3rd col from user selection
+
             bin_labels = list(range(len(breaks)-1, 0, -1))  
 
             xdt['bin_rating'] = pd.cut(
@@ -2027,13 +2030,13 @@ if menu == "🛠️ Scorecard Development":
             xdft2 = (
                 xdt
                 .rename(columns=lambda c: c.lower())
-                .dropna(subset=['m+6'])
+                .dropna(subset=[obs_col])
                 .assign(
                     rating=lambda df: np.select(
                         [
-                            df['m+6'] >= 89,
-                            df['m+6'] == 59,
-                            df['m+6'] == 29,
+                            df[obs_col] >= 89,
+                            df[obs_col] == 59,
+                            df[obs_col] == 29,
                         ],
                         [9, 8, 7],
                         default=df['bin_rating']
@@ -2043,5 +2046,5 @@ if menu == "🛠️ Scorecard Development":
             )
 
             st.session_state.xdft2 = xdft2
-            st.success("✅ Rating assigned based on Final Binning Table + m+6 rules")
+            st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
             st.dataframe(xdft2.head(), use_container_width=True)
