@@ -2140,8 +2140,14 @@ if menu == "🛠️ Scorecard Development":
                 d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
                 pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
 
-                btest = binomtest(d - 1, n, pd_val, alternative="less")
-                pv.append(1 - btest.pvalue)
+                if d > 0:
+                    btest = binomtest(d - 1, n, pd_val, alternative="less")
+                    pval = 1 - btest.pvalue
+                else:
+                    # agar defaults 0 hain to test ka sense nahi banta, direct p-value = 1
+                    pval = 1.0  
+
+                pv.append(pval)
 
             table2 = pd.DataFrame({
                 "Ratings": range(1, 7),
