@@ -2112,7 +2112,6 @@ if menu == "🛠️ Scorecard Development":
                 # Brier Score Calculation
                 xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
                 bscore = xdft2['SS'].mean()
-                brier_df = pd.DataFrame({"Brier Score": [round(bscore, 5)]})
 
                 st.success("✅ Brier Score calculated successfully!")
-                st.dataframe(brier_df, use_container_width=True)
+                st.metric(label="Brier Score", value=round(bscore, 5))
