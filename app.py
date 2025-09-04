@@ -2117,41 +2117,41 @@ if menu == "🛠️ Scorecard Development":
                 st.metric(label="Brier Score", value=round(bscore, 5))
 
         if "xdft2" in st.session_state:
-            bt = st.session_state.xdft2.copy()
+            bt = xdft2.copy()
 
-            from scipy.stats import binomtest
-
-            # Rating-wise average PD
+            # ---------------- Table 1 ----------------
             avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
             avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
-            # Counts + Binomial Test
-            N, D, pvals = [], [], []
+            N, D = [], []
             for i in range(1, 7):
-                n = len(bt[bt['rating'] == i])                           # total count
-                d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])   # defaults
-                N.append(n)
-                D.append(d)
+                N.append(len(bt[bt['rating'] == i]))
+                D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
 
-                if n > 0:
-                    pval = binomtest(
-                        d, n,
-                        avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
-                    ).pvalue
-                else:
-                    pval = None
-                pvals.append(pval)
+            table1 = avg_pd.copy()
+            table1['N'] = N
+            table1['D'] = D
+            table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
-            # Final table
-            tbs = avg_pd.copy()
-            tbs['N'] = N
-            tbs['D'] = D
-            tbs['p_value'] = pvals
-            tbs = tbs.sort_values('Ratings')
+            # ---------------- Table 2 ----------------
+            pv = []
+            for i in range(1, 7):
+                n = len(bt[bt['rating'] == i])
+                d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
+                pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
 
-            # Round
-            tbs['avg_pd'] = tbs['avg_pd'].round(4)
-            tbs['p_value'] = tbs['p_value'].round(5)
+                btest = binomtest(d - 1, n, pd_val, alternative="less")
+                pv.append(1 - btest.pvalue)
 
-            st.subheader("📊 Binomial Test by Rating")
-            st.dataframe(tbs, use_container_width=True)
+            table2 = pd.DataFrame({
+                "Ratings": range(1, 7),
+                "p-value": [round(v, 5) for v in pv]
+            })
+            table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
+
+            # ---------------- Show Tables ----------------
+            print("Table 1 (Counts & Avg PD):")
+            print(table1)
+
+            print("\nTable 2 (Binomial Test):")
+            print(table2)
