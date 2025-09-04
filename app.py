@@ -1974,10 +1974,13 @@ if menu == "🛠️ Scorecard Development":
                             xaxis_tickangle=-45
                         )
                         st.plotly_chart(fig, use_container_width=True)
+                        st.session_state.final_breaks = breaks
+                        st.session_state.binning_table = tbf
 
             st.subheader("📂 Select Columns for Model Input")
-            st.session_state.final_breaks = breaks
-            st.session_state.binning_table = tbf
+
+        if "final_breaks" in st.session_state and "binning_table" in st.session_state:
+            st.subheader("📂 Select Columns for Model Input")
 
             if "original_data" in st.session_state and not st.session_state.original_data.empty:
                 df = st.session_state.original_data.copy()
@@ -2007,10 +2010,10 @@ if menu == "🛠️ Scorecard Development":
 
                     st.session_state.xdt = xdt1
                     st.success("✅ Dataframe `xdt` created successfully!")
-                    st.write("📊 Preview of `xdt`")
                     st.dataframe(xdt1.head(), use_container_width=True)
 
-        if "binning_table" in st.session_state and "final_breaks" in st.session_state:
+        if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
+            xdt = st.session_state.xdt.copy()
             breaks = st.session_state.final_breaks
             tb = st.session_state.binning_table
 
