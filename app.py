@@ -2136,5 +2136,5 @@ if menu == "🛠️ Scorecard Development":
 
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
-                        st.subheader("📊 Binomial Test with Counts & Avg PD")
+                        st.caption("**📊 Binomial Test Results**")
                         st.dataframe(merged_table, use_container_width=True)
