@@ -363,9 +363,10 @@ def build_breaks(df, target_col, manual_breaks=None):
         elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
-                if len(categories) > 1:
-                    # 👇 Har category ko list bana kar dena (scorecardpy is format ko samajhta hai)
+                if len(categories) > 0:
                     breaks_list[col] = [[cat] for cat in categories]
+                    if df[col].isna().any():
+                        breaks_list[col].append(["missing"])
             except:
                 continue
 
