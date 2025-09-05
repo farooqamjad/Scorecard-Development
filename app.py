@@ -344,7 +344,8 @@ def build_breaks(df, target_col, manual_breaks):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 1:
-                    breaks_list[col] = categories
+                    # 🚀 Force each category into its own bin (no merge)
+                    breaks_list[col] = [[cat] for cat in categories]
             except:
                 continue
 
@@ -2136,5 +2137,5 @@ if menu == "🛠️ Scorecard Development":
 
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
-                        st.caption("**📊 Binomial Test Results**")
+                        st.caption("**📊 Binomial Test Results:**")
                         st.dataframe(merged_table, use_container_width=True)
