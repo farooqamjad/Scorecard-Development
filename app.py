@@ -911,10 +911,10 @@ elif menu == "🎯 Variables Selection":
                             st.session_state.manual_breaks.pop(var)
                             st.warning(f"🗑️ Deleted manual breaks for `{var}`")
                             st.rerun()
-                            
-                col_info = check_column_types(st.session_state.cdata_aligned, target_col="target")
-                st.write("### Column Type Check")
-                st.dataframe(col_info, use_container_width=True)
+
+            col_info = check_column_types(st.session_state.cdata_aligned, target_col="target")
+            st.write("### Column Type Check")
+            st.dataframe(col_info, use_container_width=True)
 
             if st.button("⚙️ Run WOE Transformation", type="primary", key="btn_run_iv"):
                 progress_text = "🔄 Processing WOE Transformation"
