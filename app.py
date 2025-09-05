@@ -355,24 +355,28 @@ def build_breaks(df, target_col, manual_breaks=None):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
                 if bin_result[col]['bin'].nunique() <= 1:
-                    breaks_list[col] = [1]  # fallback
+                    breaks_list[col] = [1]
             except:
                 continue
 
-        # ✅ Categorical columns → each category its own bin
+        # ✅ Categorical columns
         elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
-                bins = [[cat] for cat in categories]  # har category alag
-                if df[col].isna().any():
-                    bins.append(["missing"])  # missing alag
+                bins = [[str(cat)] for cat in categories if str(cat).lower() != "nan"]
+
+                # Agar column me NaN hai ya literal "missing" nahi mila to add karo
+                if df[col].isna().any() or "missing" not in [str(c).lower() for c in categories]:
+                    bins.append(["missing"])
+
                 if len(bins) > 1:
                     breaks_list[col] = bins
-            except:
+            except Exception as e:
+                print(f"Breaks build fail for {col}: {e}")
                 continue
 
     return breaks_list
-
+    
 def run_woe_iv_with_progress(df, target_col, manual_breaks):
     breaks_list = build_breaks(df, target_col, manual_breaks)
     total_vars = len([col for col in df.columns if col != target_col])
