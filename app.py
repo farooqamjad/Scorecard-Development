@@ -2059,7 +2059,7 @@ if menu == "🛠️ Scorecard Development":
                     )
 
                     st.session_state.xdft2 = xdft2
-                    st.caption(f"✅ Rating assigned based on Final Binning Table")
+                    st.caption(f"**✅ Rating assigned based on Final Binning Table**")
                     st.dataframe(xdft2.head(), use_container_width=True)
 
                 if "xdft2" in st.session_state:
@@ -2080,7 +2080,7 @@ if menu == "🛠️ Scorecard Development":
                     f['count_distr'] = f['count_distr'].round(2)
                     f['limit_distr'] = f['limit_distr'].round(2)
 
-                    st.subheader("📊 Rating-wise Distribution")
+                    st.caption("**📊 Rating-wise Distribution**")
                     st.dataframe(f, use_container_width=True)
 
                     fig = px.bar(
@@ -2100,7 +2100,6 @@ if menu == "🛠️ Scorecard Development":
                     bt = st.session_state.xdft2.copy()
 
                     if st.button("📌 Run Binomial Test"):
-                        # ---------------- Table 1 ----------------
                         avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
                         avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
@@ -2114,7 +2113,6 @@ if menu == "🛠️ Scorecard Development":
                         table1['D'] = D
                         table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
-                        # ---------------- Table 2 ----------------
                         pv = []
                         for i in range(1, 7):
                             n = len(bt[bt['rating'] == i])
@@ -2136,9 +2134,7 @@ if menu == "🛠️ Scorecard Development":
                         table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
                         table2 = table2.reset_index(drop=True)
 
-                        # ---------------- Merge Tables ----------------
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
-                        # ---------------- Show Merged Table ----------------
                         st.subheader("📊 Binomial Test with Counts & Avg PD")
                         st.dataframe(merged_table, use_container_width=True)
