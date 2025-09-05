@@ -342,7 +342,13 @@ def check_column_types(df, target_col="target"):
         })
     return pd.DataFrame(info)
 
-def build_breaks(df, target_col,manual_breaks):
+def build_breaks(df, target_col, manual_breaks):
+    df = df.copy()
+
+    # Fill missing values early to ensure consistency
+    for col in df.select_dtypes(include=["string", "object", "category"]).columns:
+        df[col] = df[col].fillna("missing")
+
     breaks_list = manual_breaks.copy()
 
     for col in df.columns:
@@ -354,15 +360,17 @@ def build_breaks(df, target_col,manual_breaks):
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
                 if bin_result[col]['bin'].nunique() <= 1:
                     breaks_list[col] = [1]
-            except:
+            except Exception as e:
+                print(f"Numeric binning failed for {col}: {e}")
                 continue
 
-        elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
+        elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
-                categories = df[col].dropna().unique().tolist()
+                categories = df[col].unique().tolist()
                 if len(categories) > 1:
                     breaks_list[col] = categories
-            except:
+            except Exception as e:
+                print(f"Category extraction failed for {col}: {e}")
                 continue
 
     return breaks_list
