@@ -2106,49 +2106,49 @@ if menu == "🛠️ Scorecard Development":
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
-            if "xdft2" in st.session_state:
-                bt = st.session_state.xdft2.copy()
+                if "xdft2" in st.session_state:
+                    bt = st.session_state.xdft2.copy()
 
-                if st.button("📌 Run Binomial Test"):
-                    # ---------------- Table 1 ----------------
-                    avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
-                    avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
+                    if st.button("📌 Run Binomial Test"):
+                        # ---------------- Table 1 ----------------
+                        avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
+                        avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
-                    N, D = [], []
-                    for i in range(1, 7):
-                        N.append(len(bt[bt['rating'] == i]))
-                        D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
+                        N, D = [], []
+                        for i in range(1, 7):
+                            N.append(len(bt[bt['rating'] == i]))
+                            D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
 
-                    table1 = avg_pd.copy()
-                    table1['N'] = N
-                    table1['D'] = D
-                    table1 = table1.sort_values('Ratings').reset_index(drop=True)
+                        table1 = avg_pd.copy()
+                        table1['N'] = N
+                        table1['D'] = D
+                        table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
-                    # ---------------- Table 2 ----------------
-                    pv = []
-                    for i in range(1, 7):
-                        n = len(bt[bt['rating'] == i])
-                        d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
-                        pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
+                        # ---------------- Table 2 ----------------
+                        pv = []
+                        for i in range(1, 7):
+                            n = len(bt[bt['rating'] == i])
+                            d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
+                            pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
 
-                        if d > 0:
-                            btest = binomtest(d - 1, n, pd_val, alternative="less")
-                            pval = 1 - btest.pvalue
-                        else:
-                            pval = 1.0  
+                            if d > 0:
+                                btest = binomtest(d - 1, n, pd_val, alternative="less")
+                                pval = 1 - btest.pvalue
+                            else:
+                                pval = 1.0  
 
-                        pv.append(pval)
+                            pv.append(pval)
 
-                    table2 = pd.DataFrame({
-                        "Ratings": range(1, 7),
-                        "p-value": [round(v, 5) for v in pv]
-                    })
-                    table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
-                    table2 = table2.reset_index(drop=True)
+                        table2 = pd.DataFrame({
+                            "Ratings": range(1, 7),
+                            "p-value": [round(v, 5) for v in pv]
+                        })
+                        table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
+                        table2 = table2.reset_index(drop=True)
 
-                    # ---------------- Merge Tables ----------------
-                    merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
+                        # ---------------- Merge Tables ----------------
+                        merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
-                    # ---------------- Show Merged Table ----------------
-                    st.subheader("📊 Binomial Test with Counts & Avg PD")
-                    st.dataframe(merged_table, use_container_width=True)
+                        # ---------------- Show Merged Table ----------------
+                        st.subheader("📊 Binomial Test with Counts & Avg PD")
+                        st.dataframe(merged_table, use_container_width=True)
