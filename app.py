@@ -360,7 +360,7 @@ def build_breaks(df, target_col, manual_breaks=None):
                 continue
 
         # ✅ Categorical columns → each category = its own bin
-        elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
+        elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 0:
