@@ -350,7 +350,7 @@ def build_breaks(df, target_col, manual_breaks=None):
         if col == target_col or col in breaks_list:
             continue
 
-        # ✅ Numeric columns → auto binning
+        # ✅ Numeric columns
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
@@ -359,14 +359,14 @@ def build_breaks(df, target_col, manual_breaks=None):
             except:
                 continue
 
-        # ✅ Categorical columns
-        elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
+        # ✅ Categorical columns (force object type)
+        else:
             try:
-                categories = df[col].dropna().unique().tolist()
+                series = df[col].astype("object")   # 👈 yahan force karna hai
+                categories = series.dropna().unique().tolist()
                 bins = [[str(cat)] for cat in categories if str(cat).lower() != "nan"]
 
-                # Agar column me NaN hai ya literal "missing" nahi mila to add karo
-                if df[col].isna().any() or "missing" not in [str(c).lower() for c in categories]:
+                if series.isna().any() or "missing" not in [str(c).lower() for c in categories]:
                     bins.append(["missing"])
 
                 if len(bins) > 1:
@@ -376,7 +376,7 @@ def build_breaks(df, target_col, manual_breaks=None):
                 continue
 
     return breaks_list
-    
+
 def run_woe_iv_with_progress(df, target_col, manual_breaks):
     breaks_list = build_breaks(df, target_col, manual_breaks)
     total_vars = len([col for col in df.columns if col != target_col])
