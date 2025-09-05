@@ -325,7 +325,7 @@ def iv_color(status):
         'Suspicious': 'background-color: #e2e3e5; color: #6c757d'
     }[status]
 
-def build_breaks(df, target_col, manual_breaks):
+def build_breaks(df, target_col):
     breaks_list = manual_breaks.copy()
 
     for col in df.columns:
