@@ -1986,10 +1986,9 @@ if menu == "🛠️ Scorecard Development":
         
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
-            st.subheader("📂 Select Columns for Model Input")
 
             with st.expander("📊 Model Diagnostics", expanded=False):
-              
+
                 if "original_data" in st.session_state and not st.session_state.original_data.empty:
                     df = st.session_state.original_data.copy()
 
