@@ -1983,11 +1983,13 @@ if menu == "🛠️ Scorecard Development":
                         st.session_state.final_breaks = breaks
                         st.session_state.binning_table = tbf
 
-        with st.expander("📊 Model Diagnostics", expanded=False):
+        
 
-            if "final_breaks" in st.session_state and "binning_table" in st.session_state:
-                st.subheader("📂 Select Columns for Model Input")
+        if "final_breaks" in st.session_state and "binning_table" in st.session_state:
+            st.subheader("📂 Select Columns for Model Input")
 
+            with st.expander("📊 Model Diagnostics", expanded=False):
+              
                 if "original_data" in st.session_state and not st.session_state.original_data.empty:
                     df = st.session_state.original_data.copy()
 
