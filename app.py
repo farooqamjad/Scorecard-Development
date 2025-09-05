@@ -350,7 +350,7 @@ def build_breaks(df, target_col, manual_breaks=None):
         if col == target_col or col in breaks_list:
             continue
 
-        # ✅ Numeric columns → auto binning by scorecardpy
+        # ✅ Numeric columns → auto binning
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
@@ -359,14 +359,15 @@ def build_breaks(df, target_col, manual_breaks=None):
             except:
                 continue
 
-        # ✅ Categorical columns → each category = its own bin
+        # ✅ Categorical columns → each category its own bin
         elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
-                if len(categories) > 0:
-                    breaks_list[col] = [[cat] for cat in categories]
-                    if df[col].isna().any():
-                        breaks_list[col].append(["missing"])
+                bins = [[cat] for cat in categories]  # har category alag
+                if df[col].isna().any():
+                    bins.append(["missing"])  # missing alag
+                if len(bins) > 1:
+                    breaks_list[col] = bins
             except:
                 continue
 
