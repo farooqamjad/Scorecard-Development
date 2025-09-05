@@ -1996,12 +1996,12 @@ if menu == "🛠️ Scorecard Development":
                     ⚠️ **Important:** Please select the following columns in this exact order:  
                     1️⃣ Loan Number (Unique ID)  
                     2️⃣ Limit  
-                    3️⃣ M+6 (Observation Window column)  
+                    3️⃣ M+6/M+12 (Performance Window last column)  
                     4️⃣ Target Variable  
                     """)
 
                     selected_cols = st.multiselect(
-                        "Select 4 columns in order (Loan Number, Limit, M+6, Target):",
+                        "Select 4 columns in order (Loan Number, Limit, Performance Window last column, Target):",
                         options=df.columns.tolist(),
                         default=None
                     )
@@ -2010,7 +2010,7 @@ if menu == "🛠️ Scorecard Development":
                         st.warning("⚠️ Please select exactly 4 columns in the correct order.")
                     else:
                         xdt1 = df[selected_cols].copy()
-                        xdt1 = xdt1.rename(columns={selected_cols[3]: "target"})  # ✅ rename last col to target
+                        xdt1 = xdt1.rename(columns={selected_cols[3]: "target"})  
 
                         xdt1['score'] = st.session_state.scores['score']
                         xdt1['pd'] = st.session_state.glm_fit.predict(
@@ -2018,7 +2018,7 @@ if menu == "🛠️ Scorecard Development":
                         )
 
                         st.session_state.xdt = xdt1
-                        st.session_state.selected_cols = selected_cols  # ✅ save here
+                        st.session_state.selected_cols = selected_cols 
 
                         st.success("✅ Dataframe `xdt` created successfully!")
                         st.write("📊 Preview of `xdt`")
@@ -2029,12 +2029,10 @@ if menu == "🛠️ Scorecard Development":
                     breaks = st.session_state.final_breaks
                     tb = st.session_state.binning_table
 
-                    # Get observation window column dynamically
-                    obs_col = st.session_state.selected_cols[2].lower()  # 3rd col from user selection
+                    obs_col = st.session_state.selected_cols[2].lower() 
 
                     bin_labels = list(range(len(breaks)-1, 0, -1))  
 
-                    # Temporary bin rating
                     xdt['bin_rating'] = pd.cut(
                         xdt['score'],
                         bins=breaks,
@@ -2042,7 +2040,6 @@ if menu == "🛠️ Scorecard Development":
                         include_lowest=True
                     ).astype(float)
 
-                    # Final dataframe with single `rating`
                     xdft2 = (
                         xdt
                         .rename(columns=lambda c: c.lower())
@@ -2058,7 +2055,7 @@ if menu == "🛠️ Scorecard Development":
                                 default=df['bin_rating']
                             )
                         )
-                        .drop(columns=['bin_rating'])   # ✅ remove extra column
+                        .drop(columns=['bin_rating']) 
                         .loc[lambda df: df['rating'] <= 6]
                     )
 
@@ -2069,30 +2066,24 @@ if menu == "🛠️ Scorecard Development":
                 if "xdft2" in st.session_state:
                     xdft2 = st.session_state.xdft2.copy()
 
-                    # ✅ Rename target column (ensure 4th col is target)
                     xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
 
-                    # Aggregations
                     a = xdft2.groupby('rating', as_index=False)['target'].count()
                     b = xdft2.groupby('rating', as_index=False)['limit'].sum()
 
                     f = pd.merge(a, b, on='rating')
 
-                    # Distributions
                     f['count_distr'] = (f['target'] / f['target'].sum()) * 100
                     f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
 
-                    # Format numbers
                     f['limit'] = f['limit'].round(0).astype(int)
                     f['limit'] = f['limit'].map('{:,}'.format)
                     f['count_distr'] = f['count_distr'].round(2)
                     f['limit_distr'] = f['limit_distr'].round(2)
 
-                    # ✅ UI Display
                     st.subheader("📊 Rating-wise Distribution")
                     st.dataframe(f, use_container_width=True)
 
-                    # ✅ Optional: Bar chart visualization
                     fig = px.bar(
                         f, 
                         x="rating", 
