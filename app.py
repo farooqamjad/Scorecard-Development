@@ -332,6 +332,7 @@ def build_breaks(df, target_col, manual_breaks):
         if col == target_col or col in breaks_list:
             continue
 
+        # Numeric variables
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
@@ -340,11 +341,13 @@ def build_breaks(df, target_col, manual_breaks):
             except:
                 continue
 
+        # Categorical variables
         elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 1:
-                    breaks_list[col] = categories
+                    # ✅ list of list banani hai, warna merge karega
+                    breaks_list[col] = [[cat] for cat in categories]
             except:
                 continue
 
@@ -360,9 +363,19 @@ def run_woe_iv_with_progress(df, target_col, manual_breaks):
     for i, col in enumerate(df.columns):
         if col == target_col:
             continue
+
         brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
 
-        binned = sc.woebin(df[[col, target_col]], y=target_col, breaks_list=brks)
+        # ✅ auto merge disable
+        binned = sc.woebin(
+            df[[col, target_col]],
+            y=target_col,
+            breaks_list=brks,
+            special_values=None,
+            stop_limit=0.0,   # force no merging
+            bin_num=100       # allow many bins
+        )
+
         bins.update(binned)
         iv_value = binned[col]['total_iv'].iloc[0]
         iv_list.append({'Variable': col, 'Information Value': round(iv_value, 5)})
