@@ -332,7 +332,6 @@ def build_breaks(df, target_col, manual_breaks):
         if col == target_col or col in breaks_list:
             continue
 
-        # Numeric variables
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
@@ -341,62 +340,29 @@ def build_breaks(df, target_col, manual_breaks):
             except:
                 continue
 
-        # Categorical variables
         elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 1:
-                    # ✅ list of list banani hai, warna merge karega
-                    breaks_list[col] = [[cat] for cat in categories]
+                    breaks_list[col] = categories
             except:
                 continue
 
     return breaks_list
 
-def run_woe_iv_with_progress(df, target_col, manual_breaks):
-    breaks_list = build_breaks(df, target_col, manual_breaks)
-    total_vars = len([col for col in df.columns if col != target_col])
+def run_woe_iv(df, target_col):
+    breaks_list = build_breaks(df, target_col)
+    bins = sc.woebin(df, y=target_col, breaks_list=breaks_list)
 
-    bins = {}
     iv_list = []
-
-    for i, col in enumerate(df.columns):
-        if col == target_col:
-            continue
-
-        brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
-
-        # ✅ auto merge disable
-        binned = sc.woebin(
-            df[[col, target_col]],
-            y=target_col,
-            breaks_list=brks,
-            special_values=None,
-            stop_limit=0.0,   # force no merging
-            bin_num=100       # allow many bins
-        )
-
-        bins.update(binned)
-        iv_value = binned[col]['total_iv'].iloc[0]
-        iv_list.append({'Variable': col, 'Information Value': round(iv_value, 5)})
-
-        yield {
-            "progress": int((i + 1) / total_vars * 100),
-            "variable": col,
-            "iv_entry": iv_list[-1],
-            "bins": binned,
-            "breaks": breaks_list.get(col)
-        }
+    for var, bdf in bins.items():
+        iv_value = bdf['total_iv'].iloc[0]
+        iv_list.append({'Variable': var, 'Information Value': round(iv_value, 5)})
 
     iv_summary = pd.DataFrame(iv_list).sort_values(by='Information Value', ascending=False).reset_index(drop=True)
     iv_summary['IV Status'] = iv_summary['Information Value'].apply(classify_iv_status)
 
-    yield {
-        "done": True,
-        "bins": bins,
-        "iv_summary": iv_summary,
-        "breaks_list": breaks_list
-    }
+    return bins, iv_summary, breaks_list
 
 def _round_numeric_bounds(bin_label, decimals=2):
     try:
@@ -917,7 +883,7 @@ elif menu == "🎯 Variables Selection":
                 breaks_list = {}
 
                 with st.spinner("🧪 Transforming Data to WOE"):
-                    for update in run_woe_iv_with_progress(
+                    for update in run_woe_iv(
                         st.session_state.cdata_aligned,
                         target_col="target",
                         manual_breaks=st.session_state.manual_breaks
