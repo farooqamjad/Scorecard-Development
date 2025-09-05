@@ -325,32 +325,13 @@ def iv_color(status):
         'Suspicious': 'background-color: #e2e3e5; color: #6c757d'
     }[status]
 
-
-def check_column_types(df, target_col="target"):
-    info = []
-    for col in df.columns:
-        if col == target_col:
-            continue
-        dtype = df[col].dtype
-        sample_values = df[col].dropna().unique()[:10]  # first 10 unique values
-        # Convert sample values list into comma-separated string
-        sample_str = ", ".join(map(str, sample_values))
-        info.append({
-            "Column": col,
-            "Dtype": str(dtype),
-            "Unique Count": df[col].nunique(),
-            "Sample Values": sample_str
-        })
-    return pd.DataFrame(info)
-
-def build_breaks(df, target_col, manual_breaks=None):
-    breaks_list = manual_breaks.copy() if manual_breaks else {}
+def build_breaks(df, target_col, manual_breaks):
+    breaks_list = manual_breaks.copy()
 
     for col in df.columns:
         if col == target_col or col in breaks_list:
             continue
 
-        # ✅ Numeric columns
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
@@ -359,20 +340,12 @@ def build_breaks(df, target_col, manual_breaks=None):
             except:
                 continue
 
-        # ✅ Categorical columns (force object type)
-        else:
+        elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
-                series = df[col].astype("object")   # 👈 yahan force karna hai
-                categories = series.dropna().unique().tolist()
-                bins = [[str(cat)] for cat in categories if str(cat).lower() != "nan"]
-
-                if series.isna().any() or "missing" not in [str(c).lower() for c in categories]:
-                    bins.append(["missing"])
-
-                if len(bins) > 1:
-                    breaks_list[col] = bins
-            except Exception as e:
-                print(f"Breaks build fail for {col}: {e}")
+                categories = df[col].dropna().unique().tolist()
+                if len(categories) > 1:
+                    breaks_list[col] = categories
+            except:
                 continue
 
     return breaks_list
@@ -387,7 +360,6 @@ def run_woe_iv_with_progress(df, target_col, manual_breaks):
     for i, col in enumerate(df.columns):
         if col == target_col:
             continue
-
         brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
 
         binned = sc.woebin(df[[col, target_col]], y=target_col, breaks_list=brks)
@@ -918,10 +890,6 @@ elif menu == "🎯 Variables Selection":
                             st.warning(f"🗑️ Deleted manual breaks for `{var}`")
                             st.rerun()
 
-            col_info = check_column_types(st.session_state.cdata_aligned, target_col="target")
-            st.write("### Column Type Check")
-            st.dataframe(col_info, use_container_width=True)
-
             if st.button("⚙️ Run WOE Transformation", type="primary", key="btn_run_iv"):
                 progress_text = "🔄 Processing WOE Transformation"
                 my_bar = st.progress(0, text=progress_text)
@@ -944,10 +912,12 @@ elif menu == "🎯 Variables Selection":
                         if update.get("done"):
                             st.session_state.final_woe_data = sc.woebin_ply(st.session_state.cdata_aligned, update["bins"])
                             st.session_state.woe_iv_result = (update["bins"], update["iv_summary"], update["breaks_list"])
-                            st.session_state.breaks_list = update["breaks_list"]
                             break
-                        else:
-                            my_bar.progress(update["progress"], text=f"🔄 Processing {update['variable']}")
+
+                        bins.update(update["bins"])
+                        iv_entries.append(update["iv_entry"])
+                        breaks_list[update["variable"]] = update["breaks"]
+                        my_bar.progress(update["progress"], text=f"{progress_text} ({update['variable']})")
 
                 my_bar.empty()
                 st.session_state.breaks_list = breaks_list
@@ -1926,10 +1896,10 @@ if menu == "🛠️ Scorecard Development":
 
                 # Step 1: Number of bins
                 num_bins = st.number_input(
-                    "Number of Bins", 
-                    min_value=3, 
-                    max_value=20, 
-                    value=10, 
+                    "Number of Bins",
+                    min_value=3,
+                    max_value=20,
+                    value=10,
                     step=1
                 )
 
@@ -1996,9 +1966,9 @@ if menu == "🛠️ Scorecard Development":
 
                         # 📈 Line chart Total vs Bins
                         fig = px.line(
-                            tbf, 
-                            x="Bins", 
-                            y="Total", 
+                            tbf,
+                            x="Bins",
+                            y="Total",
                             markers=True,
                             title="📈 Total Count per Bin"
                         )
@@ -2013,7 +1983,7 @@ if menu == "🛠️ Scorecard Development":
                         st.session_state.final_breaks = breaks
                         st.session_state.binning_table = tbf
 
-        
+
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
 
@@ -2023,11 +1993,11 @@ if menu == "🛠️ Scorecard Development":
                     df = st.session_state.original_data.copy()
 
                     st.markdown("""
-                    ⚠️ **Important:** Please select the following columns in this exact order:  
-                    1️⃣ Loan Number (Unique ID)  
-                    2️⃣ Limit  
-                    3️⃣ M+6/M+12 (Performance Window last column)  
-                    4️⃣ Target Variable  
+                    ⚠️ **Important:** Please select the following columns in this exact order:
+                    1️⃣ Loan Number (Unique ID)
+                    2️⃣ Limit
+                    3️⃣ M+6/M+12 (Performance Window last column)
+                    4️⃣ Target Variable
                     """)
 
                     selected_cols = st.multiselect(
@@ -2040,7 +2010,7 @@ if menu == "🛠️ Scorecard Development":
                         st.warning("⚠️ Please select exactly 4 columns in the correct order.")
                     else:
                         xdt1 = df[selected_cols].copy()
-                        xdt1 = xdt1.rename(columns={selected_cols[3]: "target"})  
+                        xdt1 = xdt1.rename(columns={selected_cols[3]: "target"})
 
                         xdt1['score'] = st.session_state.scores['score']
                         xdt1['pd'] = st.session_state.glm_fit.predict(
@@ -2048,7 +2018,7 @@ if menu == "🛠️ Scorecard Development":
                         )
 
                         st.session_state.xdt = xdt1
-                        st.session_state.selected_cols = selected_cols 
+                        st.session_state.selected_cols = selected_cols
 
                         st.success("✅ Dataframe created successfully!")
                         st.dataframe(xdt1.head(), use_container_width=True)
@@ -2058,9 +2028,9 @@ if menu == "🛠️ Scorecard Development":
                     breaks = st.session_state.final_breaks
                     tb = st.session_state.binning_table
 
-                    obs_col = st.session_state.selected_cols[2].lower() 
+                    obs_col = st.session_state.selected_cols[2].lower()
 
-                    bin_labels = list(range(len(breaks)-1, 0, -1))  
+                    bin_labels = list(range(len(breaks)-1, 0, -1))
 
                     xdt['bin_rating'] = pd.cut(
                         xdt['score'],
@@ -2084,7 +2054,7 @@ if menu == "🛠️ Scorecard Development":
                                 default=df['bin_rating']
                             )
                         )
-                        .drop(columns=['bin_rating']) 
+                        .drop(columns=['bin_rating'])
                         .loc[lambda df: df['rating'] <= 6]
                     )
 
@@ -2114,9 +2084,9 @@ if menu == "🛠️ Scorecard Development":
                     st.dataframe(f, use_container_width=True)
 
                     fig = px.bar(
-                        f, 
-                        x="rating", 
-                        y=["count_distr", "limit_distr"], 
+                        f,
+                        x="rating",
+                        y=["count_distr", "limit_distr"],
                         barmode="group",
                         title="📈 Distribution of Count and Limit by Rating"
                     )
@@ -2153,7 +2123,7 @@ if menu == "🛠️ Scorecard Development":
                                 btest = binomtest(d - 1, n, pd_val, alternative="less")
                                 pval = 1 - btest.pvalue
                             else:
-                                pval = 1.0  
+                                pval = 1.0
 
                             pv.append(pval)
 
