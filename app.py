@@ -368,6 +368,8 @@ def build_breaks(df, target_col,manual_breaks):
     return breaks_list
 
 def run_woe_iv_with_progress(df, target_col, manual_breaks):
+    for col in df.select_dtypes(include=["category", "object"]).columns:
+        df[col] = df[col].astype("string").fillna("missing")
     breaks_list = build_breaks(df, target_col, manual_breaks)
     total_vars = len([col for col in df.columns if col != target_col])
 
@@ -377,7 +379,7 @@ def run_woe_iv_with_progress(df, target_col, manual_breaks):
     for i, col in enumerate(df.columns):
         if col == target_col:
             continue
-        brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
+        brks = {col: breaks_list.get(col)} if breaks_list.get(col) is not None else {}
 
         binned = sc.woebin(df[[col, target_col]], y=target_col, breaks_list=brks)
         bins.update(binned)
