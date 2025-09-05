@@ -2024,131 +2024,131 @@ if menu == "🛠️ Scorecard Development":
                         st.write("📊 Preview of `xdt`")
                         st.dataframe(xdt1.head(), use_container_width=True)
 
-            if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
-                xdt = st.session_state.xdt.copy()
-                breaks = st.session_state.final_breaks
-                tb = st.session_state.binning_table
+                if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
+                    xdt = st.session_state.xdt.copy()
+                    breaks = st.session_state.final_breaks
+                    tb = st.session_state.binning_table
 
-                # Get observation window column dynamically
-                obs_col = st.session_state.selected_cols[2].lower()  # 3rd col from user selection
+                    # Get observation window column dynamically
+                    obs_col = st.session_state.selected_cols[2].lower()  # 3rd col from user selection
 
-                bin_labels = list(range(len(breaks)-1, 0, -1))  
+                    bin_labels = list(range(len(breaks)-1, 0, -1))  
 
-                # Temporary bin rating
-                xdt['bin_rating'] = pd.cut(
-                    xdt['score'],
-                    bins=breaks,
-                    labels=bin_labels,
-                    include_lowest=True
-                ).astype(float)
+                    # Temporary bin rating
+                    xdt['bin_rating'] = pd.cut(
+                        xdt['score'],
+                        bins=breaks,
+                        labels=bin_labels,
+                        include_lowest=True
+                    ).astype(float)
 
-                # Final dataframe with single `rating`
-                xdft2 = (
-                    xdt
-                    .rename(columns=lambda c: c.lower())
-                    .dropna(subset=[obs_col])
-                    .assign(
-                        rating=lambda df: np.select(
-                            [
-                                df[obs_col] >= 89,
-                                df[obs_col] == 59,
-                                df[obs_col] == 29,
-                            ],
-                            [9, 8, 7],
-                            default=df['bin_rating']
+                    # Final dataframe with single `rating`
+                    xdft2 = (
+                        xdt
+                        .rename(columns=lambda c: c.lower())
+                        .dropna(subset=[obs_col])
+                        .assign(
+                            rating=lambda df: np.select(
+                                [
+                                    df[obs_col] >= 89,
+                                    df[obs_col] == 59,
+                                    df[obs_col] == 29,
+                                ],
+                                [9, 8, 7],
+                                default=df['bin_rating']
+                            )
                         )
+                        .drop(columns=['bin_rating'])   # ✅ remove extra column
+                        .loc[lambda df: df['rating'] <= 6]
                     )
-                    .drop(columns=['bin_rating'])   # ✅ remove extra column
-                    .loc[lambda df: df['rating'] <= 6]
-                )
 
-                st.session_state.xdft2 = xdft2
-                st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
-                st.dataframe(xdft2.head(), use_container_width=True)
+                    st.session_state.xdft2 = xdft2
+                    st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
+                    st.dataframe(xdft2.head(), use_container_width=True)
+
+                if "xdft2" in st.session_state:
+                    xdft2 = st.session_state.xdft2.copy()
+
+                    # ✅ Rename target column (ensure 4th col is target)
+                    xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
+
+                    # Aggregations
+                    a = xdft2.groupby('rating', as_index=False)['target'].count()
+                    b = xdft2.groupby('rating', as_index=False)['limit'].sum()
+
+                    f = pd.merge(a, b, on='rating')
+
+                    # Distributions
+                    f['count_distr'] = (f['target'] / f['target'].sum()) * 100
+                    f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
+
+                    # Format numbers
+                    f['limit'] = f['limit'].round(0).astype(int)
+                    f['limit'] = f['limit'].map('{:,}'.format)
+                    f['count_distr'] = f['count_distr'].round(2)
+                    f['limit_distr'] = f['limit_distr'].round(2)
+
+                    # ✅ UI Display
+                    st.subheader("📊 Rating-wise Distribution")
+                    st.dataframe(f, use_container_width=True)
+
+                    # ✅ Optional: Bar chart visualization
+                    fig = px.bar(
+                        f, 
+                        x="rating", 
+                        y=["count_distr", "limit_distr"], 
+                        barmode="group",
+                        title="📈 Distribution of Count and Limit by Rating"
+                    )
+                    fig.update_layout(
+                        xaxis_title="Rating",
+                        yaxis_title="Distribution (%)"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
             if "xdft2" in st.session_state:
-                xdft2 = st.session_state.xdft2.copy()
+                bt = st.session_state.xdft2.copy()
 
-                # ✅ Rename target column (ensure 4th col is target)
-                xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
+                if st.button("📌 Run Binomial Test"):
+                    # ---------------- Table 1 ----------------
+                    avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
+                    avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
-                # Aggregations
-                a = xdft2.groupby('rating', as_index=False)['target'].count()
-                b = xdft2.groupby('rating', as_index=False)['limit'].sum()
+                    N, D = [], []
+                    for i in range(1, 7):
+                        N.append(len(bt[bt['rating'] == i]))
+                        D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
 
-                f = pd.merge(a, b, on='rating')
+                    table1 = avg_pd.copy()
+                    table1['N'] = N
+                    table1['D'] = D
+                    table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
-                # Distributions
-                f['count_distr'] = (f['target'] / f['target'].sum()) * 100
-                f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
+                    # ---------------- Table 2 ----------------
+                    pv = []
+                    for i in range(1, 7):
+                        n = len(bt[bt['rating'] == i])
+                        d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
+                        pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
 
-                # Format numbers
-                f['limit'] = f['limit'].round(0).astype(int)
-                f['limit'] = f['limit'].map('{:,}'.format)
-                f['count_distr'] = f['count_distr'].round(2)
-                f['limit_distr'] = f['limit_distr'].round(2)
+                        if d > 0:
+                            btest = binomtest(d - 1, n, pd_val, alternative="less")
+                            pval = 1 - btest.pvalue
+                        else:
+                            pval = 1.0  
 
-                # ✅ UI Display
-                st.subheader("📊 Rating-wise Distribution")
-                st.dataframe(f, use_container_width=True)
+                        pv.append(pval)
 
-                # ✅ Optional: Bar chart visualization
-                fig = px.bar(
-                    f, 
-                    x="rating", 
-                    y=["count_distr", "limit_distr"], 
-                    barmode="group",
-                    title="📈 Distribution of Count and Limit by Rating"
-                )
-                fig.update_layout(
-                    xaxis_title="Rating",
-                    yaxis_title="Distribution (%)"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    table2 = pd.DataFrame({
+                        "Ratings": range(1, 7),
+                        "p-value": [round(v, 5) for v in pv]
+                    })
+                    table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
+                    table2 = table2.reset_index(drop=True)
 
-        if "xdft2" in st.session_state:
-            bt = st.session_state.xdft2.copy()
+                    # ---------------- Merge Tables ----------------
+                    merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
-            if st.button("📌 Run Binomial Test"):
-                # ---------------- Table 1 ----------------
-                avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
-                avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
-
-                N, D = [], []
-                for i in range(1, 7):
-                    N.append(len(bt[bt['rating'] == i]))
-                    D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
-
-                table1 = avg_pd.copy()
-                table1['N'] = N
-                table1['D'] = D
-                table1 = table1.sort_values('Ratings').reset_index(drop=True)
-
-                # ---------------- Table 2 ----------------
-                pv = []
-                for i in range(1, 7):
-                    n = len(bt[bt['rating'] == i])
-                    d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
-                    pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
-
-                    if d > 0:
-                        btest = binomtest(d - 1, n, pd_val, alternative="less")
-                        pval = 1 - btest.pvalue
-                    else:
-                        pval = 1.0  
-
-                    pv.append(pval)
-
-                table2 = pd.DataFrame({
-                    "Ratings": range(1, 7),
-                    "p-value": [round(v, 5) for v in pv]
-                })
-                table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
-                table2 = table2.reset_index(drop=True)
-
-                # ---------------- Merge Tables ----------------
-                merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
-
-                # ---------------- Show Merged Table ----------------
-                st.subheader("📊 Binomial Test with Counts & Avg PD")
-                st.dataframe(merged_table, use_container_width=True)
+                    # ---------------- Show Merged Table ----------------
+                    st.subheader("📊 Binomial Test with Counts & Avg PD")
+                    st.dataframe(merged_table, use_container_width=True)
