@@ -2059,7 +2059,7 @@ if menu == "🛠️ Scorecard Development":
                     )
 
                     st.session_state.xdft2 = xdft2
-                    st.success(f"✅ Rating assigned based on Final Binning Table + `{obs_col}` rules")
+                    st.caption(f"✅ Rating assigned based on Final Binning Table")
                     st.dataframe(xdft2.head(), use_container_width=True)
 
                 if "xdft2" in st.session_state:
