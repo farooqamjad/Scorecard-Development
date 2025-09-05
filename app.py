@@ -344,8 +344,7 @@ def build_breaks(df, target_col, manual_breaks):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 1:
-                    # 🚀 Force each category into its own bin (no merge)
-                    breaks_list[col] = [[cat] for cat in categories]
+                    breaks_list[col] = categories
             except:
                 continue
 
