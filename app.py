@@ -350,19 +350,41 @@ def build_breaks(df, target_col, manual_breaks):
 
     return breaks_list
 
-def run_woe_iv(df, target_col):
-    breaks_list = build_breaks(df, target_col)
-    bins = sc.woebin(df, y=target_col, breaks_list=breaks_list)
+def run_woe_iv_with_progress(df, target_col, manual_breaks):
+    breaks_list = build_breaks(df, target_col, manual_breaks)
+    total_vars = len([col for col in df.columns if col != target_col])
 
+    bins = {}
     iv_list = []
-    for var, bdf in bins.items():
-        iv_value = bdf['total_iv'].iloc[0]
-        iv_list.append({'Variable': var, 'Information Value': round(iv_value, 5)})
+
+    for i, col in enumerate(df.columns):
+        if col == target_col:
+            continue
+
+        brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
+
+        binned = sc.woebin(df[[col, target_col]], y=target_col, breaks_list=brks)
+        bins.update(binned)
+        iv_value = binned[col]['total_iv'].iloc[0]
+        iv_list.append({'Variable': col, 'Information Value': round(iv_value, 5)})
+
+        yield {
+            "progress": int((i + 1) / total_vars * 100),
+            "variable": col,
+            "iv_entry": iv_list[-1],
+            "bins": binned,
+            "breaks": breaks_list.get(col)
+        }
 
     iv_summary = pd.DataFrame(iv_list).sort_values(by='Information Value', ascending=False).reset_index(drop=True)
     iv_summary['IV Status'] = iv_summary['Information Value'].apply(classify_iv_status)
 
-    return bins, iv_summary, breaks_list
+    yield {
+        "done": True,
+        "bins": bins,
+        "iv_summary": iv_summary,
+        "breaks_list": breaks_list
+    }
 
 def _round_numeric_bounds(bin_label, decimals=2):
     try:
@@ -883,7 +905,7 @@ elif menu == "🎯 Variables Selection":
                 breaks_list = {}
 
                 with st.spinner("🧪 Transforming Data to WOE"):
-                    for update in run_woe_iv(
+                    for update in run_woe_iv_with_progress(
                         st.session_state.cdata_aligned,
                         target_col="target",
                         manual_breaks=st.session_state.manual_breaks
@@ -891,13 +913,11 @@ elif menu == "🎯 Variables Selection":
                         if update.get("done"):
                             st.session_state.final_woe_data = sc.woebin_ply(st.session_state.cdata_aligned, update["bins"])
                             st.session_state.woe_iv_result = (update["bins"], update["iv_summary"], update["breaks_list"])
+                            st.session_state.breaks_list = update["breaks_list"]
                             break
-
-                        bins.update(update["bins"])
-                        iv_entries.append(update["iv_entry"])
-                        breaks_list[update["variable"]] = update["breaks"]
-                        my_bar.progress(update["progress"], text=f"{progress_text} ({update['variable']})")
-
+                        else:
+                            my_bar.progress(update["progress"], text=f"🔄 Processing {update['variable']}")
+                            
                 my_bar.empty()
                 st.session_state.breaks_list = breaks_list
                 st.success(f"✅ WOE transformation completed for {len(bins)} variables!")
