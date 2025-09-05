@@ -325,22 +325,6 @@ def iv_color(status):
         'Suspicious': 'background-color: #e2e3e5; color: #6c757d'
     }[status]
 
-def check_column_types(df, target_col="target"):
-    info = []
-    for col in df.columns:
-        if col == target_col:
-            continue
-        dtype = df[col].dtype
-        sample_values = df[col].dropna().unique()[:10]  # first 10 unique values
-        # Convert sample values list into comma-separated string
-        sample_str = ", ".join(map(str, sample_values))
-        info.append({
-            "Column": col,
-            "Dtype": str(dtype),
-            "Unique Count": df[col].nunique(),
-            "Sample Values": sample_str
-        })
-    return pd.DataFrame(info)
 
 def build_breaks(df, target_col, manual_breaks):
     df = df.copy()
@@ -916,10 +900,6 @@ elif menu == "🎯 Variables Selection":
                             st.session_state.manual_breaks.pop(var)
                             st.warning(f"🗑️ Deleted manual breaks for `{var}`")
                             st.rerun()
-
-            col_info = check_column_types(st.session_state.cdata_aligned, target_col="target")
-            st.write("### Column Type Check")
-            st.dataframe(col_info, use_container_width=True)
 
             if st.button("⚙️ Run WOE Transformation", type="primary", key="btn_run_iv"):
                 progress_text = "🔄 Processing WOE Transformation"
