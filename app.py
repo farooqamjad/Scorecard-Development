@@ -325,26 +325,29 @@ def iv_color(status):
         'Suspicious': 'background-color: #e2e3e5; color: #6c757d'
     }[status]
 
-def build_breaks(df, target_col, manual_breaks):
-    breaks_list = manual_breaks.copy()
+def build_breaks(df, target_col, manual_breaks=None):
+    breaks_list = manual_breaks.copy() if manual_breaks else {}
 
     for col in df.columns:
         if col == target_col or col in breaks_list:
             continue
 
+        # ✅ Numeric columns → auto binning by scorecardpy
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
                 if bin_result[col]['bin'].nunique() <= 1:
-                    breaks_list[col] = [1]
+                    breaks_list[col] = [1]  # fallback
             except:
                 continue
 
+        # ✅ Categorical columns → each category = its own bin
         elif df[col].dtype == 'object' or isinstance(df[col].dtype, pd.CategoricalDtype):
             try:
                 categories = df[col].dropna().unique().tolist()
                 if len(categories) > 1:
-                    breaks_list[col] = categories
+                    # 👇 Har category ko list bana kar dena (scorecardpy is format ko samajhta hai)
+                    breaks_list[col] = [[cat] for cat in categories]
             except:
                 continue
 
@@ -917,7 +920,7 @@ elif menu == "🎯 Variables Selection":
                             break
                         else:
                             my_bar.progress(update["progress"], text=f"🔄 Processing {update['variable']}")
-                            
+
                 my_bar.empty()
                 st.session_state.breaks_list = breaks_list
                 st.success(f"✅ WOE transformation completed for {len(bins)} variables!")
