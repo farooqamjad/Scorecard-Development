@@ -2003,14 +2003,14 @@ if menu == "🛠️ Scorecard Development":
 
                     st.markdown("""
                     ⚠️ **Important:** Please select the following columns in this exact order:
-                    1️⃣ Loan Number (Unique ID)
-                    2️⃣ Limit
-                    3️⃣ M+6/M+12 (Performance Window last column)
+                    1️⃣ Loan Number (Unique ID)  
+                    2️⃣ Limit  
+                    3️⃣ M+6/M+12 (Performance Window last column)  
                     4️⃣ Target Variable
                     """)
 
                     selected_cols = st.multiselect(
-                        "Select 4 columns in order (Loan Number, Limit, Performance Window last column, Target):",
+                        "Select columns:",
                         options=df.columns.tolist(),
                         default=None
                     )
