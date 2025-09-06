@@ -1940,9 +1940,12 @@ if menu == "🛠️ Scorecard Development":
                     num_rows="dynamic"   # ✅ user can add/remove rows → bins change
                 )
 
-                # 🔄 Auto-fix continuity (cascade lower-upper)
+                # 🔄 Auto-fix continuity (cascade lower-upper both ways)
                 for i in range(len(edited_ranges_df) - 1):
                     edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
+
+                for i in range(len(edited_ranges_df) - 1, 0, -1):
+                    edited_ranges_df.loc[i-1, "Lower"] = edited_ranges_df.loc[i, "Upper"]
 
                 # Step 4: Build breaks
                 try:
