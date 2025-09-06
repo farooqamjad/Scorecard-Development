@@ -2129,6 +2129,17 @@ if menu == "🛠️ Scorecard Development":
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
+                    if st.button("🧮 Calculate Brier Score"):
+                        try:
+                            xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
+                            bscore = xdft2['SS'].mean()
+                            brier_df = pd.DataFrame({"Brier Score": [round(bscore, 5)]})
+
+                            st.caption("**📉 Brier Score**")
+                            st.dataframe(brier_df, use_container_width=True)
+                        except Exception as e:
+                            st.error(f"⚠️ Error calculating Brier Score: {e}")
+
                 if "xdft2" in st.session_state:
                     bt = st.session_state.xdft2.copy()
 
