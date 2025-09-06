@@ -1927,35 +1927,34 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Build ranges (descending)
-                bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-                ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
-                ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
+                # Initialize session_state for bin ranges if not exists
+                if "adjusted_ranges_df" not in st.session_state:
+                    bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
+                    ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
+                    ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
+                    st.session_state.adjusted_ranges_df = ranges_df
 
-                st.markdown("### ✂️ Adjust Bin Ranges")
-                edited_ranges_df = st.data_editor(
-                    ranges_df,
+                # Show editable table (same table, live update)
+                st.session_state.adjusted_ranges_df = st.data_editor(
+                    st.session_state.adjusted_ranges_df,
                     use_container_width=True,
                     hide_index=True,
                     num_rows="dynamic"
                 )
 
-                # ✅ Step 2: Make a working copy to apply cascading
-                adjusted_df = edited_ranges_df.copy()
-
-                # 🔄 Cascade lower → upper
+                # Apply cascading lower → upper
+                adjusted_df = st.session_state.adjusted_ranges_df.copy()
                 for i in range(len(adjusted_df) - 1):
                     adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
 
-                # 🔄 Cascade upper → lower (reverse direction)
+                # Apply cascading upper → lower (reverse)
                 for i in range(len(adjusted_df) - 1, 0, -1):
                     adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
 
-                # ✅ Step 3: Show live-updated adjusted table
-                st.markdown("### 🔄 Live Adjusted Ranges")
-                st.dataframe(adjusted_df, use_container_width=True)
+                # Update session_state table so live table itself updates
+                st.session_state.adjusted_ranges_df = adjusted_df
 
-                # Step 4: Build breaks
+                # Build breaks
                 try:
                     lowers = adjusted_df["Lower"].astype(int).tolist()
                     uppers = adjusted_df["Upper"].astype(int).tolist()
@@ -1965,7 +1964,7 @@ if menu == "🛠️ Scorecard Development":
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # ✅ Final binning table
+                # Generate final binning table on button press
                 if st.button("📋 Generate Binning Table", type="primary"):
                     pd_train = st.session_state.glm_fit.predict(
                         sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
@@ -1981,9 +1980,42 @@ if menu == "🛠️ Scorecard Development":
                     # Show final table
                     st.dataframe(tbf, use_container_width=True)
 
-                    # Save in session
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=tbf["Bins"],
+                        y=tbf["Total"],
+                        mode="lines+markers+text",
+                        name="Total",
+                        text=[f"{val:,}" for val in tbf["Total"]],
+                        textposition="top center",
+                        marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
+                        line=dict(width=2.5, color="royalblue"),
+                        hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"
+                    ))
+                    fig.update_layout(
+                        title=dict(
+                            text="📈 Total Count per Bin",
+                            x=0.5, xanchor="center",
+                            font=dict(size=16, color="darkblue")
+                        ),
+                        xaxis_title="Bins (Score Ranges)",
+                        yaxis_title="Total Count",
+                        plot_bgcolor="rgba(255,255,255,1)",
+                        paper_bgcolor="rgba(255,255,255,1)",
+                        font=dict(size=13),
+                        hovermode="x unified",
+                        showlegend=False,
+                        margin=dict(t=60, b=40, l=40, r=40)
+                    )
+                    fig.update_xaxes(showgrid=False, tickangle=-45, tickfont=dict(size=11), showticklabels=True)
+                    fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Save session
                     st.session_state.final_breaks = breaks
                     st.session_state.binning_table = tbf
+  
 
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
