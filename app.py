@@ -1983,7 +1983,7 @@ if menu == "🛠️ Scorecard Development":
                             mode="lines+markers+text",
                             name="Total",
                             text=[f"{val:,}" for val in tbf["Total"]],
-                            textposition="middle right",  # shifted to avoid overlap
+                            textposition="top center",  # slightly above the point
                             marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
                             line=dict(width=2.5, color="royalblue"),
                             hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"  # clean hover
@@ -1999,24 +1999,23 @@ if menu == "🛠️ Scorecard Development":
                             ),
                             xaxis_title="Bins (Score Ranges)",
                             yaxis_title="Total Count",
-                            plot_bgcolor="white",
+                            plot_bgcolor="rgba(255,255,255,1)",  # pure white background
+                            paper_bgcolor="rgba(255,255,255,1)", # remove outer shading
                             font=dict(size=13),
                             hovermode="x unified",
                             showlegend=False,
                             margin=dict(t=60, b=40, l=40, r=40)
                         )
 
-                        # Gridlines (light and minimal)
+                        # Gridlines completely removed
                         fig.update_xaxes(
-                            showgrid=True,
-                            gridcolor="rgba(220,220,220,0.3)",
+                            showgrid=False,
                             tickangle=-45,
                             tickfont=dict(size=11),
                             showticklabels=True
                         )
                         fig.update_yaxes(
-                            showgrid=True,
-                            gridcolor="rgba(220,220,220,0.3)",
+                            showgrid=False,
                             tickfont=dict(size=11)
                         )
 
