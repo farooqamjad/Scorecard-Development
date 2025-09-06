@@ -1922,24 +1922,26 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                st.markdown("### ✂️ Adjust Bin Breaks")
+                # Build ranges (pair lower-upper into intervals)
+                bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
+                ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
 
-                # Convert auto breaks into DataFrame (line-wise editable)
-                breaks_df = pd.DataFrame({"Bin_Edges": auto_breaks})
+                st.markdown("### ✂️ Adjust Bin Ranges")
 
-                # Show editable table
-                edited_breaks_df = st.data_editor(
-                    breaks_df,
-                    num_rows="dynamic",  # user can add/remove rows if needed
+                # Editable table
+                edited_ranges_df = st.data_editor(
+                    ranges_df,
                     use_container_width=True,
                     hide_index=True
                 )
 
-                # Parse user edits
+                # Parse user edits back into breaks
                 try:
-                    breaks = sorted(list(set(edited_breaks_df["Bin_Edges"].astype(float).tolist())))
+                    lower_vals = edited_ranges_df["Lower"].astype(float).tolist()
+                    upper_vals = edited_ranges_df["Upper"].astype(float).tolist()
+                    breaks = sorted(list(set(lower_vals + [upper_vals[-1]])))  # combine lowers + last upper
                 except:
-                    st.error("⚠️ Please enter valid numeric bin edges.")
+                    st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
                 if len(breaks) < 2:
