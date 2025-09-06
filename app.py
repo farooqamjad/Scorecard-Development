@@ -1883,7 +1883,6 @@ if menu == "🛠️ Scorecard Development":
             # Ensure min/max coverage to avoid NaN bins
             score_min = tb['score'].min()
             score_max = tb['score'].max()
-
             breaks[0] = min(breaks[0], score_min)
             breaks[-1] = max(breaks[-1], score_max)
 
@@ -1892,8 +1891,8 @@ if menu == "🛠️ Scorecard Development":
             tb['Bins'] = tb['Bins'].astype(str)
 
             # Aggregations
-            tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
-            bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+            tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+            bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
             minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
             maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
@@ -1902,7 +1901,7 @@ if menu == "🛠️ Scorecard Development":
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-            # ✅ Fix column order
+            # Fix column order
             tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
 
             # Sort bins in descending order
@@ -1930,57 +1929,56 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 2: Build bin ranges (descending)
+                # Step 3: Build ranges DataFrame (descending order)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                ranges_df = ranges_df.round(0).astype(int)
+                ranges_df = ranges_df.round(0).astype(int)   # no decimals
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                # Step 3: Editable table with Upper editable, Lower locked
                 st.markdown("### ✂️ Adjust Bin Ranges")
-                edited_df = st.data_editor(
+                edited_ranges_df = st.data_editor(
                     ranges_df,
                     use_container_width=True,
-                    hide_index=True,
-                    num_rows="fixed",
-                    column_config={
-                        "Upper": st.column_config.NumberColumn("Upper", step=1),
-                        "Lower": st.column_config.NumberColumn("Lower", disabled=True)
-                    }
+                    hide_index=True
                 )
 
-                # Step 4: Recalculate Lower column based on edited Upper
+                # 🔄 Auto-fix Upper & Lower continuity
+                for i in range(len(edited_ranges_df) - 1):
+                    edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
+
+                # Ensure Lower < Upper in each row
+                edited_ranges_df["Lower"] = edited_ranges_df[["Lower", "Upper"]].min(axis=1)
+                edited_ranges_df["Upper"] = edited_ranges_df[["Lower", "Upper"]].max(axis=1)
+
+                # Step 4: Convert back to breaks
                 try:
-                    uppers = edited_df["Upper"].astype(int).tolist()
-                    lowers = [uppers[i+1] for i in range(len(uppers)-1)] + [min_score]
-                    lowers = lowers[::-1]
-                    uppers = uppers[::-1]
+                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
+                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
 
-                    synced_df = pd.DataFrame({
-                        "Lower": lowers,
-                        "Upper": uppers
-                    })
-
-                    # Final breaks list
+                    # Rebuild breaks: lowest lower + all uppers
                     breaks = sorted(list(set([lowers[-1]] + uppers)))
+                except:
+                    st.error("⚠️ Please enter valid numeric values.")
+                    breaks = auto_breaks
 
-                    # Bin count check
-                    if len(breaks) - 1 != num_bins:
-                        st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
-                    else:
-                        if st.button("📋 Generate Binning Table", type="primary"):
-                            pd_train = st.session_state.glm_fit.predict(
-                                sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
-                            )
+                # Step 5: Ensure correct number of bins
+                if len(breaks) - 1 != num_bins:
+                    st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
+                else:
+                    if st.button("📋 Generate Binning Table", type="primary"):
+                        pd_train = st.session_state.glm_fit.predict(
+                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                        )
 
-                            tbf = generate_binning_table(
-                                st.session_state.scores,
-                                st.session_state.cdata_filtered['target'],
-                                pd_train,
-                                breaks
-                            )
+                        tbf = generate_binning_table(
+                            st.session_state.scores,
+                            st.session_state.cdata_filtered['target'],
+                            pd_train,
+                            breaks
+                        )
 
-                            st.dataframe(tbf, use_container_width=True)
+                        # Show table
+                        st.dataframe(tbf, use_container_width=True)
 
                         # 📈 Line chart
                         fig = go.Figure()
