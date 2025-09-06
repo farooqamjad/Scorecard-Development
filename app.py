@@ -1982,12 +1982,12 @@ if menu == "🛠️ Scorecard Development":
                             title="📈 Total Count per Bin"
                         )
 
-                        # Add labels for each point
+                        # Add labels for each point (just the number, no extra formatting)
                         fig.update_traces(
-                            text=tbf["Total"],
+                            text=[f"{val:,}" for val in tbf["Total"]],  # formatted with commas
                             textposition="top center",
-                            marker=dict(size=10, color="blue"),   # bigger blue markers
-                            line=dict(width=3, color="royalblue") # thicker line
+                            marker=dict(size=9, color="royalblue", line=dict(width=1, color="white")),  # subtle white border
+                            line=dict(width=2.5, color="royalblue")
                         )
 
                         # Layout styling
@@ -1996,15 +1996,17 @@ if menu == "🛠️ Scorecard Development":
                             yaxis_title="Total Count",
                             xaxis_tickangle=-45,
                             plot_bgcolor="white",
-                            font=dict(size=12),
-                            title=dict(x=0.5, xanchor="center"),   # center title
-                            hovermode="x unified"
+                            font=dict(size=13, family="Arial"),
+                            title=dict(x=0.5, xanchor="center", font=dict(size=16, color="darkblue")),
+                            hovermode="x unified",
+                            margin=dict(t=60, b=40, l=40, r=40)
                         )
 
-                        # Gridline styling
-                        fig.update_xaxes(showgrid=True, gridwidth=0.5, gridcolor="lightgrey")
-                        fig.update_yaxes(showgrid=True, gridwidth=0.5, gridcolor="lightgrey")
+                        # Gridline styling (lighter and thinner)
+                        fig.update_xaxes(showgrid=True, gridwidth=0.3, gridcolor="rgba(200,200,200,0.3)")
+                        fig.update_yaxes(showgrid=True, gridwidth=0.3, gridcolor="rgba(200,200,200,0.3)")
 
+                        # Render chart
                         st.plotly_chart(fig, use_container_width=True)
 
                         # Save in session
