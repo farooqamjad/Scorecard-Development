@@ -1586,31 +1586,34 @@ if menu == "🛠️ Scorecard Development":
         style_expander_header()
         with st.expander("🛠️ Scorecard Development", expanded=expander_state):
 
-            st.subheader("⚙️ Scorecard Parameters")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                points0 = st.number_input("🎯 Base Score (points0)", value=1060, step=1)
-            with col2:
-                odds0 = st.number_input("⚖️ Base Odds (odds0)", value=1/10.0, format="%.4f")
-            with col3:
-                pdo = st.number_input("📈 Points to Double Odds (PDO)", value=20, step=1)
+            with st.form(key="scorecard_form"):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    points0 = st.number_input("🎯 Base Score (points0)", value=1060, step=1)
+                with col2:
+                    odds0 = st.number_input("⚖️ Base Odds (odds0)", value=1/10.0, format="%.4f")
+                with col3:
+                    pdo = st.number_input("📈 Points to Double Odds (PDO)", value=20, step=1)
 
-            run_scorecard = st.button("⚙️ Generate Scorecard", type="primary", key="generate_scorecard_btn")
+                run_scorecard = st.form_submit_button("⚙️ Generate Scorecard")
 
-            if run_scorecard:
-                st.session_state.iv_selection_updated = False
-                breaks_list = st.session_state.get("breaks_list", None)
+                if run_scorecard:
+                    st.session_state.iv_selection_updated = False
+                    breaks_list = st.session_state.get("breaks_list", None)
 
-                card, scores, glm_fit, svar, cdata_woe = generate_scorecard(
-                    st.session_state.cdata_filtered, breaks_list, points0, odds0, pdo
-                )
+                    with st.spinner("🔄 Generating Scorecard..."):
+                        card, scores, glm_fit, svar, cdata_woe = generate_scorecard(
+                            st.session_state.cdata_filtered, breaks_list, points0, odds0, pdo
+                        )
 
-                # Save in session state
-                st.session_state.card = card
-                st.session_state.scores = scores
-                st.session_state.glm_fit = glm_fit
-                st.session_state.svar_final = svar
-                st.session_state.final_cdata_woe = cdata_woe
+                    st.success("✅ Scorecard generated successfully!")
+
+                    # Save in session state
+                    st.session_state.card = card
+                    st.session_state.scores = scores
+                    st.session_state.glm_fit = glm_fit
+                    st.session_state.svar_final = svar
+                    st.session_state.final_cdata_woe = cdata_woe
 
             if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
                 card = st.session_state.card
