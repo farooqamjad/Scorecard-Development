@@ -1963,13 +1963,13 @@ if menu == "🛠️ Scorecard Development":
                     st.rerun()
 
                 # Build breaks
-                try:
-                    lowers = adjusted_df["Lower"].astype(int).tolist()
-                    uppers = adjusted_df["Upper"].astype(int).tolist()
-                    breaks = [lowers[-1]] + uppers[::-1]
-                except:
-                    st.error("⚠️ Please enter valid numeric values.")
-                    breaks = auto_breaks
+                    try:
+                        lowers = adjusted_df["Lower"].astype(int).tolist()
+                        uppers = adjusted_df["Upper"].astype(int).tolist()
+                        breaks = [lowers[-1]] + uppers[::-1]
+                    except:
+                        st.error("⚠️ Please enter valid numeric values.")
+                        breaks = auto_breaks
 
                 # Generate final binning table
                 if st.button("📋 Generate Binning Table", type="primary"):
