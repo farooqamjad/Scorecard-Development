@@ -1976,37 +1976,51 @@ if menu == "🛠️ Scorecard Development":
                         # 📈 Line chart
                         fig = go.Figure()
 
-                        # Add line trace with markers and labels
+                        # Line + markers + labels
                         fig.add_trace(go.Scatter(
                             x=tbf["Bins"],
                             y=tbf["Total"],
                             mode="lines+markers+text",
                             name="Total",
-                            text=[f"{val:,}" for val in tbf["Total"]],  # comma-separated labels
-                            textposition="top center",
+                            text=[f"{val:,}" for val in tbf["Total"]],
+                            textposition="middle right",  # shifted to avoid overlap
                             marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
                             line=dict(width=2.5, color="royalblue"),
-                            hovertemplate="Bin: %{x}<br>Total: %{y:,}<extra></extra>"  # clean hover
+                            hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"  # clean hover
                         ))
 
                         # Layout styling
                         fig.update_layout(
-                            title="📈 Total Count per Bin",
+                            title=dict(
+                                text="📈 Total Count per Bin",
+                                x=0.5,
+                                xanchor="center",
+                                font=dict(size=16, color="darkblue")
+                            ),
                             xaxis_title="Bins (Score Ranges)",
                             yaxis_title="Total Count",
                             plot_bgcolor="white",
                             font=dict(size=13),
-                            title_x=0.5,
-                            hovermode="x",  # single hover
-                            margin=dict(t=50, b=40, l=40, r=40),
-                            showlegend=False
+                            hovermode="x unified",
+                            showlegend=False,
+                            margin=dict(t=60, b=40, l=40, r=40)
                         )
 
-                        # Gridlines (light and subtle)
-                        fig.update_xaxes(showgrid=True, gridcolor="rgba(220,220,220,0.3)", tickangle=-45)
-                        fig.update_yaxes(showgrid=True, gridcolor="rgba(220,220,220,0.3)")
+                        # Gridlines (light and minimal)
+                        fig.update_xaxes(
+                            showgrid=True,
+                            gridcolor="rgba(220,220,220,0.3)",
+                            tickangle=-45,
+                            tickfont=dict(size=11),
+                            showticklabels=True
+                        )
+                        fig.update_yaxes(
+                            showgrid=True,
+                            gridcolor="rgba(220,220,220,0.3)",
+                            tickfont=dict(size=11)
+                        )
 
-                        # Show chart
+                        # Display chart
                         st.plotly_chart(fig, use_container_width=True)
 
                         # Save in session
