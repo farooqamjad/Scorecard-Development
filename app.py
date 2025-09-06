@@ -1942,19 +1942,9 @@ if menu == "🛠️ Scorecard Development":
                     hide_index=True
                 )
 
-                # 🔄 Enforce continuity (top-down)
-                for i in range(len(edited_ranges_df) - 1):
-                    # Next row ka Upper same rahega, but Lower sync karo
-                    edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
-
-                # 🔄 Enforce continuity (bottom-up)
-                for i in range(len(edited_ranges_df) - 1):
-                    edited_ranges_df.loc[i+1, "Lower"] = edited_ranges_df.loc[i, "Upper"]
-
-                # ✅ Final cleanup: Lower < Upper
-                edited_ranges_df["Lower"] = edited_ranges_df[["Lower", "Upper"]].min(axis=1)
-                edited_ranges_df["Upper"] = edited_ranges_df[["Lower", "Upper"]].max(axis=1)
-
+                # 🔄 Auto-fix continuity: Lower change → next row Upper sync
+                for i in range(1, len(edited_ranges_df)):
+                    edited_ranges_df.loc[i, "Upper"] = edited_ranges_df.loc[i-1, "Lower"]
 
                 # Step 4: Convert back to breaks
                 try:
