@@ -1943,7 +1943,7 @@ if menu == "🛠️ Scorecard Development":
                     use_container_width=True,
                     hide_index=True,
                     num_rows=num_bins,
-                    key="editor"  # unique key important hai
+                    key="editor"
                 )
 
                 # Check if user made a change
@@ -1956,20 +1956,17 @@ if menu == "🛠️ Scorecard Development":
                     for i in range(len(adjusted_df) - 1, 0, -1):
                         adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
 
-                    # Save back
                     st.session_state.adjusted_ranges_df = adjusted_df
-
-                    # Force rerun so UI reflects immediately
                     st.rerun()
 
-                # Build breaks
-                    try:
-                        lowers = adjusted_df["Lower"].astype(int).tolist()
-                        uppers = adjusted_df["Upper"].astype(int).tolist()
-                        breaks = [lowers[-1]] + uppers[::-1]
-                    except:
-                        st.error("⚠️ Please enter valid numeric values.")
-                        breaks = auto_breaks
+                # ✅ Always compute breaks (even if no edit happened)
+                try:
+                    lowers = st.session_state.adjusted_ranges_df["Lower"].astype(int).tolist()
+                    uppers = st.session_state.adjusted_ranges_df["Upper"].astype(int).tolist()
+                    breaks = [lowers[-1]] + uppers[::-1]
+                except:
+                    st.error("⚠️ Please enter valid numeric values.")
+                    breaks = auto_breaks
 
                 # Generate final binning table
                 if st.button("📋 Generate Binning Table", type="primary"):
