@@ -2054,89 +2054,88 @@ if menu == "🛠️ Scorecard Development":
                         st.session_state.selected_cols = selected_cols
 
                         st.success("✅ Dataframe created successfully!")
-                        st.dataframe(xdt1.head(), use_container_width=True)
+                        st.dataframe(xdt1.head(), use_container_width=True, hide_index=True)
 
-                if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
-                    xdt = st.session_state.xdt.copy()
-                    breaks = st.session_state.final_breaks
-                    tb = st.session_state.binning_table
+                if st.button("🗂️ Map Ratings"):
+                    if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
+                        xdt = st.session_state.xdt.copy()
+                        breaks = st.session_state.final_breaks
 
-                    obs_col = st.session_state.selected_cols[2].lower()
+                        obs_col = st.session_state.selected_cols[2].lower()
+                        bin_labels = list(range(len(breaks)-1, 0, -1))
 
-                    bin_labels = list(range(len(breaks)-1, 0, -1))
+                        xdt['bin_rating'] = pd.cut(
+                            xdt['score'],
+                            bins=breaks,
+                            labels=bin_labels,
+                            include_lowest=True
+                        ).astype(float)
 
-                    xdt['bin_rating'] = pd.cut(
-                        xdt['score'],
-                        bins=breaks,
-                        labels=bin_labels,
-                        include_lowest=True
-                    ).astype(float)
-
-                    xdft2 = (
-                        xdt
-                        .rename(columns=lambda c: c.lower())
-                        .dropna(subset=[obs_col])
-                        .assign(
-                            rating=lambda df: np.select(
-                                [
-                                    df[obs_col] >= 89,
-                                    df[obs_col] == 59,
-                                    df[obs_col] == 29,
-                                ],
-                                [9, 8, 7],
-                                default=df['bin_rating']
+                        xdft2 = (
+                            xdt
+                            .rename(columns=lambda c: c.lower())
+                            .dropna(subset=[obs_col])
+                            .assign(
+                                rating=lambda df: np.select(
+                                    [
+                                        df[obs_col] >= 89,
+                                        df[obs_col] == 59,
+                                        df[obs_col] == 29,
+                                    ],
+                                    [9, 8, 7],
+                                    default=df['bin_rating']
+                                )
                             )
+                            .drop(columns=['bin_rating'])
+                            .loc[lambda df: df['rating'] <= 6]
                         )
-                        .drop(columns=['bin_rating'])
-                        .loc[lambda df: df['rating'] <= 6]
-                    )
 
-                    st.session_state.xdft2 = xdft2
-                    st.caption(f"**✅ Rating assigned based on Final Binning Table**")
-                    st.dataframe(xdft2.head(), use_container_width=True)
+                        st.session_state.xdft2 = xdft2
+                        st.caption(f"**✅ Rating assigned based on Final Binning Table**")
+                        st.dataframe(xdft2.head(), use_container_width=True, hide_index=True)
 
-                if "xdft2" in st.session_state:
-                    xdft2 = st.session_state.xdft2.copy()
+                if st.button("📊 Show Rating-wise Distribution"):
+                    if "xdft2" in st.session_state:
+                        xdft2 = st.session_state.xdft2.copy()
+                        xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
 
-                    xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
+                        a = xdft2.groupby('rating', as_index=False)['target'].count()
+                        b = xdft2.groupby('rating', as_index=False)['limit'].sum()
+                        f = pd.merge(a, b, on='rating')
 
-                    a = xdft2.groupby('rating', as_index=False)['target'].count()
-                    b = xdft2.groupby('rating', as_index=False)['limit'].sum()
+                        f['count_distr'] = (f['target'] / f['target'].sum()) * 100
+                        f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
 
-                    f = pd.merge(a, b, on='rating')
+                        f['limit'] = f['limit'].round(0).astype(int)
+                        f['limit'] = f['limit'].map('{:,}'.format)
+                        f['count_distr'] = f['count_distr'].round(2)
+                        f['limit_distr'] = f['limit_distr'].round(2)
 
-                    f['count_distr'] = (f['target'] / f['target'].sum()) * 100
-                    f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
+                        st.caption("**📊 Rating-wise Distribution**")
+                        st.dataframe(f, use_container_width=True, hide_index=True)
 
-                    f['limit'] = f['limit'].round(0).astype(int)
-                    f['limit'] = f['limit'].map('{:,}'.format)
-                    f['count_distr'] = f['count_distr'].round(2)
-                    f['limit_distr'] = f['limit_distr'].round(2)
+                        fig = px.bar(
+                            f,
+                            x="rating",
+                            y=["count_distr", "limit_distr"],
+                            barmode="group",
+                            title="📈 Distribution of Count and Limit by Rating"
+                        )
+                        fig.update_layout(
+                            xaxis_title="Rating",
+                            yaxis_title="Distribution (%)"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
 
-                    st.caption("**📊 Rating-wise Distribution**")
-                    st.dataframe(f, use_container_width=True)
-
-                    fig = px.bar(
-                        f,
-                        x="rating",
-                        y=["count_distr", "limit_distr"],
-                        barmode="group",
-                        title="📈 Distribution of Count and Limit by Rating"
-                    )
-                    fig.update_layout(
-                        xaxis_title="Rating",
-                        yaxis_title="Distribution (%)"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    if st.button("🧮 Calculate Brier Score"):
+                if st.button("🧮 Calculate Brier Score"):
+                    if "xdft2" in st.session_state:
                         try:
+                            xdft2 = st.session_state.xdft2.copy()
                             xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
                             bscore = xdft2['SS'].mean()
-                            brier_df = pd.DataFrame({"Brier Score": [round(bscore, 5)]})
 
-                            st.caption("**📉 Brier Score**")
-                            st.dataframe(brier_df, use_container_width=True)
+                            st.metric(label="Brier Score", value=round(bscore, 5))
+
                         except Exception as e:
                             st.error(f"⚠️ Error calculating Brier Score: {e}")
 
