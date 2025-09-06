@@ -1916,11 +1916,9 @@ if menu == "🛠️ Scorecard Development":
 
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
-                st.subheader("📊 Binning Analysis")
 
-                # Step 1: User selects number of bins
                 num_bins = st.number_input(
-                    "Number of Bins",
+                    "Define Number of Bins",
                     min_value=3,
                     max_value=20,
                     value=10,
@@ -1938,7 +1936,7 @@ if menu == "🛠️ Scorecard Development":
                 ranges_df = ranges_df.round(0).astype(int)   # ✅ no decimals
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                st.markdown("### ✂️ Adjust Bin Ranges (Descending Order)")
+                st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
                     ranges_df,
                     use_container_width=True,
