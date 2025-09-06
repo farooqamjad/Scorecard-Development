@@ -1929,35 +1929,47 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 3: Build ranges DataFrame (descending order)
+                # Step 2: Build ranges (descending)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-                ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                ranges_df = ranges_df.round(0).astype(int)   # no decimals
-                ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
+                init_ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
+                init_ranges_df = init_ranges_df.round(0).astype(int)
+                init_ranges_df = init_ranges_df.iloc[::-1].reset_index(drop=True)
 
+                # Step 3: Put in session_state if not exists
+                if "ranges_df" not in st.session_state:
+                    st.session_state.ranges_df = init_ranges_df.copy()
+
+                # Step 4: User edit
                 st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
-                    ranges_df,
+                    st.session_state.ranges_df,
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    key="editor"
                 )
 
-                # 🔄 Auto-fix continuity: Lower change → next row Upper sync
-                for i in range(1, len(edited_ranges_df)):
-                    edited_ranges_df.loc[i, "Upper"] = edited_ranges_df.loc[i-1, "Lower"]
+                # Step 5: Auto-fix continuity (live update)
+                fixed_df = edited_ranges_df.copy()
+                for i in range(1, len(fixed_df)):
+                    fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
 
-                # Step 4: Convert back to breaks
+                # Overwrite session_state so next rerun keeps it updated
+                st.session_state.ranges_df = fixed_df
+
+                # Show live-updated editor again (optional mirror preview)
+                st.markdown("### ✅ Synced Bin Ranges")
+                st.dataframe(fixed_df, use_container_width=True)
+
+                # Step 6: Convert to breaks
                 try:
-                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
-                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
-
-                    # Rebuild breaks: lowest lower + all uppers
+                    lowers = fixed_df["Lower"].astype(int).tolist()
+                    uppers = fixed_df["Upper"].astype(int).tolist()
                     breaks = sorted(list(set([lowers[-1]] + uppers)))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # Step 5: Ensure correct number of bins
+                # Step 7: Check bins count
                 if len(breaks) - 1 != num_bins:
                     st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
@@ -1973,7 +1985,6 @@ if menu == "🛠️ Scorecard Development":
                             breaks
                         )
 
-                        # Show table
                         st.dataframe(tbf, use_container_width=True)
 
                         # 📈 Line chart
