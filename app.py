@@ -1902,6 +1902,9 @@ if menu == "🛠️ Scorecard Development":
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
+            # ✅ Fix column order
+            tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+
             # Sort bins in descending order
             tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
             tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
@@ -1910,7 +1913,6 @@ if menu == "🛠️ Scorecard Development":
             tbf.index.name = "S.No"
 
             return tbf
-
 
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
