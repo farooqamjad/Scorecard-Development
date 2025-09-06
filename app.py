@@ -2056,8 +2056,8 @@ if menu == "🛠️ Scorecard Development":
                         st.success("✅ Dataframe created successfully!")
                         st.dataframe(xdt1.head(), use_container_width=True, hide_index=True)
 
-                if st.button("🗂️ Map Ratings"):
-                    if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
+                if "xdt" in st.session_state:
+                    if st.button("🗂️ Map Ratings"):
                         xdt = st.session_state.xdt.copy()
                         breaks = st.session_state.final_breaks
 
@@ -2091,11 +2091,14 @@ if menu == "🛠️ Scorecard Development":
                         )
 
                         st.session_state.xdft2 = xdft2
+                        st.session_state.step1_done = True
+
                         st.caption(f"**✅ Rating assigned based on Final Binning Table**")
                         st.dataframe(xdft2.head(), use_container_width=True, hide_index=True)
 
-                if st.button("📊 Show Rating-wise Distribution"):
-                    if "xdft2" in st.session_state:
+
+                if st.session_state.get("step1_done") and "xdft2" in st.session_state:
+                    if st.button("📊 Show Rating-wise Distribution"):
                         xdft2 = st.session_state.xdft2.copy()
                         xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
 
@@ -2110,6 +2113,8 @@ if menu == "🛠️ Scorecard Development":
                         f['limit'] = f['limit'].map('{:,}'.format)
                         f['count_distr'] = f['count_distr'].round(2)
                         f['limit_distr'] = f['limit_distr'].round(2)
+
+                        st.session_state.step2_done = True
 
                         st.caption("**📊 Rating-wise Distribution**")
                         st.dataframe(f, use_container_width=True, hide_index=True)
@@ -2127,22 +2132,23 @@ if menu == "🛠️ Scorecard Development":
                         )
                         st.plotly_chart(fig, use_container_width=True)
 
-                if st.button("🧮 Calculate Brier Score"):
-                    if "xdft2" in st.session_state:
+
+                if st.session_state.get("step2_done") and "xdft2" in st.session_state:
+                    if st.button("🧮 Calculate Brier Score"):
                         try:
                             xdft2 = st.session_state.xdft2.copy()
                             xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
                             bscore = xdft2['SS'].mean()
 
+                            st.session_state.step3_done = True
                             st.metric(label="Brier Score", value=round(bscore, 5))
 
                         except Exception as e:
                             st.error(f"⚠️ Error calculating Brier Score: {e}")
 
-                if "xdft2" in st.session_state:
-                    bt = st.session_state.xdft2.copy()
-
+                if st.session_state.get("step3_done") and "xdft2" in st.session_state:
                     if st.button("📌 Run Binomial Test"):
+                        bt = st.session_state.xdft2.copy()
                         avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
                         avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
@@ -2180,4 +2186,4 @@ if menu == "🛠️ Scorecard Development":
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
                         st.caption("**📊 Binomial Test Results:**")
-                        st.dataframe(merged_table, use_container_width=True)
+                        st.dataframe(merged_table, use_container_width=True, hide_index=True)
