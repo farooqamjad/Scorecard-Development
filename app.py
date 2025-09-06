@@ -1595,7 +1595,7 @@ if menu == "🛠️ Scorecard Development":
                 with col3:
                     pdo = st.number_input("📈 Points to Double Odds (PDO)", value=20, step=1)
 
-                run_scorecard = st.form_submit_button("⚙️ Generate Scorecard")
+                run_scorecard = st.form_submit_button("⚙️ Generate Scorecard", type="primary")
 
                 if run_scorecard:
                     st.session_state.iv_selection_updated = False
