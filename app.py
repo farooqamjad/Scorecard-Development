@@ -1927,27 +1927,33 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Build ranges (descending)
+                # Build default ranges
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
+                # 🔄 Maintain session state for ranges
+                if "ranges_df" not in st.session_state:
+                    st.session_state.ranges_df = ranges_df.copy()
+
                 st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
-                    ranges_df,
+                    st.session_state.ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="dynamic"   # ✅ user can add/remove rows → bins change
+                    num_rows="dynamic"
                 )
 
-                # 🔄 Auto-fix continuity (cascade lower-upper)
-                for i in range(len(edited_ranges_df) - 1):
-                    edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
+                # 🔄 Cascade fix inside session state
+                if not edited_ranges_df.equals(st.session_state.ranges_df):
+                    for i in range(len(edited_ranges_df) - 1):
+                        edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
+                    st.session_state.ranges_df = edited_ranges_df.copy()
 
                 # Step 4: Build breaks
                 try:
-                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
-                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
+                    lowers = st.session_state.ranges_df["Lower"].astype(int).tolist()
+                    uppers = st.session_state.ranges_df["Upper"].astype(int).tolist()
 
                     breaks = [min(lowers)] + uppers
                     breaks = sorted(set(breaks))
@@ -1970,59 +1976,6 @@ if menu == "🛠️ Scorecard Development":
 
                     # Show final table
                     st.dataframe(tbf, use_container_width=True)
-
-                    # Save in session
-                    st.session_state.final_breaks = breaks
-                    st.session_state.binning_table = tbf
-
-                    # 📈 Line chart
-                    fig = go.Figure()
-
-                    # Line + markers + labels
-                    fig.add_trace(go.Scatter(
-                        x=tbf["Bins"],
-                        y=tbf["Total"],
-                        mode="lines+markers+text",
-                        name="Total",
-                        text=[f"{val:,}" for val in tbf["Total"]],
-                        textposition="top center",  # slightly above the point
-                        marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
-                        line=dict(width=2.5, color="royalblue"),
-                        hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"  # clean hover
-                    ))
-
-                    # Layout styling
-                    fig.update_layout(
-                        title=dict(
-                            text="📈 Total Count per Bin",
-                            x=0.5,
-                            xanchor="center",
-                            font=dict(size=16, color="darkblue")
-                        ),
-                        xaxis_title="Bins (Score Ranges)",
-                        yaxis_title="Total Count",
-                        plot_bgcolor="rgba(255,255,255,1)",  # pure white background
-                        paper_bgcolor="rgba(255,255,255,1)", # remove outer shading
-                        font=dict(size=13),
-                        hovermode="x unified",
-                        showlegend=False,
-                        margin=dict(t=60, b=40, l=40, r=40)
-                    )
-
-                    # Gridlines completely removed
-                    fig.update_xaxes(
-                        showgrid=False,
-                        tickangle=-45,
-                        tickfont=dict(size=11),
-                        showticklabels=True
-                    )
-                    fig.update_yaxes(
-                        showgrid=False,
-                        tickfont=dict(size=11)
-                    )
-
-                    # Display chart
-                    st.plotly_chart(fig, use_container_width=True)
 
                     # Save in session
                     st.session_state.final_breaks = breaks
