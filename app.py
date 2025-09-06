@@ -1927,19 +1927,19 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Initialize session_state for bin ranges if not exists
-                if "adjusted_ranges_df" not in st.session_state:
+                # Initialize session_state for bin ranges if not exists or num_bins changed
+                if ("adjusted_ranges_df" not in st.session_state) or (len(st.session_state.adjusted_ranges_df) != num_bins):
                     bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                     ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
                     ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
                     st.session_state.adjusted_ranges_df = ranges_df
 
-                # Show editable table (same table, live update)
+                # Show editable table (live update)
                 st.session_state.adjusted_ranges_df = st.data_editor(
                     st.session_state.adjusted_ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="dynamic"
+                    num_rows=num_bins
                 )
 
                 # Apply cascading lower → upper
@@ -1954,17 +1954,17 @@ if menu == "🛠️ Scorecard Development":
                 # Update session_state table so live table itself updates
                 st.session_state.adjusted_ranges_df = adjusted_df
 
-                # Build breaks
+                # Build breaks exactly matching num_bins
                 try:
                     lowers = adjusted_df["Lower"].astype(int).tolist()
                     uppers = adjusted_df["Upper"].astype(int).tolist()
-                    breaks = [min(lowers)] + uppers
-                    breaks = sorted(set(breaks))
+                    # Use exact number of breaks: lowest lower + all uppers
+                    breaks = [lowers[-1]] + uppers[::-1]
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # Generate final binning table on button press
+                # Generate final binning table
                 if st.button("📋 Generate Binning Table", type="primary"):
                     pd_train = st.session_state.glm_fit.predict(
                         sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
@@ -1979,6 +1979,10 @@ if menu == "🛠️ Scorecard Development":
 
                     # Show final table
                     st.dataframe(tbf, use_container_width=True)
+
+                    # Save in session
+                    st.session_state.final_breaks = breaks
+                    st.session_state.binning_table = tbf
 
 
                     fig = go.Figure()
