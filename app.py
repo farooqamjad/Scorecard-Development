@@ -1930,22 +1930,16 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 3: Build initial bin ranges (descending order)
+                # Step 2: Build bin ranges (descending)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
                 ranges_df = ranges_df.round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
+                # Step 3: Editable table with Upper editable, Lower locked
                 st.markdown("### ✂️ Adjust Bin Ranges")
-
-                # Step 4: Prepare editable table (Upper editable, Lower auto-sync)
-                editable_df = ranges_df.copy()
-                editable_df["Lower"] = None  # placeholder for recalculation
-                editable_df = editable_df[["Upper", "Lower"]]  # show Upper first
-
-                # Step 5: Show editable table
                 edited_df = st.data_editor(
-                    editable_df,
+                    ranges_df,
                     use_container_width=True,
                     hide_index=True,
                     num_rows="fixed",
@@ -1955,45 +1949,41 @@ if menu == "🛠️ Scorecard Development":
                     }
                 )
 
-                # Step 6: Recalculate Lower column based on edited Upper
+                # Step 4: Recalculate Lower column based on edited Upper
                 try:
-                    edited_uppers = edited_df["Upper"].astype(int).tolist()
-                    edited_lowers = [edited_uppers[i+1] for i in range(len(edited_uppers)-1)] + [min_score]
-                    edited_lowers = edited_lowers[::-1]
-                    edited_uppers = edited_uppers[::-1]
+                    uppers = edited_df["Upper"].astype(int).tolist()
+                    lowers = [uppers[i+1] for i in range(len(uppers)-1)] + [min_score]
+                    lowers = lowers[::-1]
+                    uppers = uppers[::-1]
 
                     synced_df = pd.DataFrame({
-                        "Upper": edited_uppers,
-                        "Lower": edited_lowers
+                        "Lower": lowers,
+                        "Upper": uppers
                     })
 
-                    synced_df = synced_df[["Lower", "Upper"]]  # final order
-                    breaks = sorted(list(set([edited_lowers[-1]] + edited_uppers)))
+                    # Final breaks list
+                    breaks = sorted(list(set([lowers[-1]] + uppers)))
 
-                    # Show synced table directly
-                    st.dataframe(synced_df, use_container_width=True)
+                    # Bin count check
+                    if len(breaks) - 1 != num_bins:
+                        st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
+                    else:
+                        if st.button("📋 Generate Binning Table", type="primary"):
+                            pd_train = st.session_state.glm_fit.predict(
+                                sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                            )
 
-                except:
-                    st.error("⚠️ Please enter valid numeric values.")
-                    breaks = auto_breaks
+                            tbf = generate_binning_table(
+                                st.session_state.scores,
+                                st.session_state.cdata_filtered['target'],
+                                pd_train,
+                                breaks
+                            )
 
-                # Step 7: Validate bin count
-                if len(breaks) - 1 != num_bins:
-                    st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
-                else:
-                    if st.button("📋 Generate Binning Table", type="primary"):
-                        pd_train = st.session_state.glm_fit.predict(
-                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
-                        )
+                            st.dataframe(tbf, use_container_width=True)
 
-                        tbf = generate_binning_table(
-                            st.session_state.scores,
-                            st.session_state.cdata_filtered['target'],
-                            pd_train,
-                            breaks
-                        )
-
-                        st.dataframe(tbf, use_container_width=True)
+                except Exception as e:
+                    st.error(f"⚠️ Error syncing bin ranges: {e}")
 
                         # 📈 Line chart
                         fig = go.Figure()
