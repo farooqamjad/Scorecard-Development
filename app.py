@@ -1942,18 +1942,25 @@ if menu == "🛠️ Scorecard Development":
                     st.session_state.adjusted_ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows=num_bins
+                    num_rows=num_bins,
+                    key="editor"  # unique key important hai
                 )
 
-                # 🚀 Apply cascading immediately on edited version
-                adjusted_df = edited_df.copy()
-                for i in range(len(adjusted_df) - 1):
-                    adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]   # lower → upper
-                for i in range(len(adjusted_df) - 1, 0, -1):
-                    adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]   # upper → lower
+                # Check if user made a change
+                if not edited_df.equals(st.session_state.adjusted_ranges_df):
+                    adjusted_df = edited_df.copy()
 
-                # Save back to session_state (so table instantly updates)
-                st.session_state.adjusted_ranges_df = adjusted_df
+                    # 🚀 Cascading apply
+                    for i in range(len(adjusted_df) - 1):
+                        adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
+                    for i in range(len(adjusted_df) - 1, 0, -1):
+                        adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
+
+                    # Save back
+                    st.session_state.adjusted_ranges_df = adjusted_df
+
+                    # Force rerun so UI reflects immediately
+                    st.rerun()
 
                 # Build breaks
                 try:
