@@ -1872,43 +1872,51 @@ if menu == "🛠️ Scorecard Development":
 
                     st.success("✅ Scorecard Developed Successfully!")
 
-        def tb_func_dynamic(scores, labels, pred_probs, num_bins=10, min_score=None, max_score=None):
+        def generate_binning_table(scores, labels, pred_probs, breaks):
+            # Create DataFrame
             tb = pd.DataFrame({
                 'score': scores['score'],
                 'pd': pred_probs,
                 'target': labels.astype(int)
             })
 
-            # Agar user custom min/max de to use karein warna auto
-            if min_score is None:
-                min_score = tb['score'].min()
-            if max_score is None:
-                max_score = tb['score'].max()
+            # Ensure min/max coverage to avoid NaN bins
+            score_min = tb['score'].min()
+            score_max = tb['score'].max()
 
-            # Create bin edges dynamically (equal-width bins)
-            bin_edges = np.linspace(min_score, max_score, num_bins + 1)
+            breaks[0] = min(breaks[0], score_min)
+            breaks[-1] = max(breaks[-1], score_max)
 
             # Assign bins
-            tb['Bins'] = pd.cut(tb['score'], bins=bin_edges, include_lowest=True)
+            tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True, right=True)
+            tb['Bins'] = tb['Bins'].astype(str)
 
-            # Aggregate stats
-            tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
-            bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+            # Aggregations
+            tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+            bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
             minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
             maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
+            # Merge
             tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-            tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+            # Sort bins in descending order
+            tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
+            tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
+            tbf.reset_index(drop=True, inplace=True)
+            tbf.index = tbf.index + 1
+            tbf.index.name = "S.No"
+
             return tbf
+
 
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
                 st.subheader("📊 Binning Analysis")
 
-                # Step 1: Number of bins
+                # Step 1: User selects number of bins
                 num_bins = st.number_input(
                     "Number of Bins",
                     min_value=3,
@@ -1917,80 +1925,55 @@ if menu == "🛠️ Scorecard Development":
                     step=1
                 )
 
-                # Step 2: Auto bin edges
-                min_score = int(st.session_state.scores['score'].min())
-                max_score = int(st.session_state.scores['score'].max())
+                # Step 2: Generate auto bin edges
+                min_score = st.session_state.scores['score'].min()
+                max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Build bin ranges (lower, upper)
+                # Step 3: Build ranges DataFrame (descending order)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-
-                # Convert to DataFrame and reverse order (descending)
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                ranges_df = ranges_df.round(0).astype(int)   # ✅ remove decimals
+                ranges_df = ranges_df.round(0).astype(int)   # ✅ no decimals
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
                 st.markdown("### ✂️ Adjust Bin Ranges (Descending Order)")
-
-                # Editable table
                 edited_ranges_df = st.data_editor(
                     ranges_df,
                     use_container_width=True,
                     hide_index=True
                 )
 
-                # Convert back to breaks list
+                # Step 4: Convert back to breaks
                 try:
                     lowers = edited_ranges_df["Lower"].astype(int).tolist()
                     uppers = edited_ranges_df["Upper"].astype(int).tolist()
-                    breaks = sorted(list(set(lowers + [uppers[-1]])))
+
+                    # Rebuild breaks: lowest lower + all uppers
+                    breaks = sorted(list(set([lowers[-1]] + uppers)))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                if len(breaks) < 2:
-                    st.error("⚠️ At least 2 breaks are required.")
+                # Step 5: Ensure correct number of bins
+                if len(breaks) - 1 != num_bins:
+                    st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
                     if st.button("Generate Binning Table"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
                         )
 
-                        tb = pd.DataFrame({
-                            'score': st.session_state.scores['score'],
-                            'pd': pd_train,
-                            'target': st.session_state.cdata_filtered['target'].astype(int)
-                        })
-
-                        # Assign bins
-                        tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
-                        tb['Bins'] = tb['Bins'].astype(str)
-
-                        # Aggregations
-                        tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
-                        bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
-                        minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
-                        maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
-
-                        # Merge
-                        tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
-                        tbf['Goods'] = tbf['Total'] - tbf['Bads']
-                        tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
-
-                        # Reorder columns
-                        tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
-
-                        # ✅ Sort bins descending (higher score → lower score)
-                        tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
-                        tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
-                        tbf.reset_index(drop=True, inplace=True)
-                        tbf.index = tbf.index + 1
-                        tbf.index.name = "S.No"
+                        tbf = generate_binning_table(
+                            st.session_state.scores,
+                            st.session_state.cdata_filtered['target'],
+                            pd_train,
+                            breaks
+                        )
 
                         # Show table
                         st.dataframe(tbf, use_container_width=True)
 
-                        # 📈 Line chart Total vs Bins
+                        # 📈 Line chart
                         fig = px.line(
                             tbf,
                             x="Bins",
