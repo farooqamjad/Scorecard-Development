@@ -1880,14 +1880,17 @@ if menu == "🛠️ Scorecard Development":
                 'target': labels.astype(int)
             })
 
-            # Ensure min/max coverage to avoid NaN bins
+            # Ensure min/max coverage
             score_min = tb['score'].min()
             score_max = tb['score'].max()
             breaks[0] = min(breaks[0], score_min)
             breaks[-1] = max(breaks[-1], score_max)
 
+            # ✅ Always sort breaks ascending before pd.cut
+            breaks_sorted = sorted(breaks)
+
             # Assign bins
-            tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True, right=True)
+            tb['Bins'] = pd.cut(tb['score'], bins=breaks_sorted, include_lowest=True, right=True)
             tb['Bins'] = tb['Bins'].astype(str)
 
             # Aggregations
@@ -1901,10 +1904,10 @@ if menu == "🛠️ Scorecard Development":
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-            # Fix column order
+            # Column order
             tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
 
-            # Sort bins in descending order
+            # ✅ Force descending order for display
             tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
             tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
             tbf.reset_index(drop=True, inplace=True)
@@ -1913,10 +1916,11 @@ if menu == "🛠️ Scorecard Development":
 
             return tbf
 
+
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
 
-                # Step 1: Initial number of bins (only as a starting point)
+                # Step 1: Start bins
                 num_bins = st.number_input(
                     "🧮 Define Number of Bins",
                     min_value=3,
@@ -1925,18 +1929,17 @@ if menu == "🛠️ Scorecard Development":
                     step=1
                 )
 
-                # Step 2: Generate auto bin edges
+                # Step 2: Auto bin edges
                 min_score = st.session_state.scores['score'].min()
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 3: Build ranges DataFrame (descending order)
+                # Step 3: Build ranges (descending)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
                 ranges_df = ranges_df.round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                # Save ranges in session if not already
                 if "ranges_df" not in st.session_state:
                     st.session_state.ranges_df = ranges_df
 
@@ -1945,28 +1948,23 @@ if menu == "🛠️ Scorecard Development":
                     st.session_state.ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="dynamic",   # ✅ user can add/remove rows
-                    key="editor"
+                    num_rows="dynamic"
                 )
 
-                # 🔄 Auto-fix continuity (Lower[i] → Upper[i-1])
+                # 🔄 Auto-fix continuity
                 fixed_df = edited_ranges_df.copy()
                 for i in range(1, len(fixed_df)):
                     fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
 
-                # ✅ Overwrite immediately
+                # Update in session
                 if not fixed_df.equals(st.session_state.ranges_df):
                     st.session_state.ranges_df = fixed_df
                     st.rerun()
 
-                # Step 4: Convert back to breaks (based on rows, not num_bins)
-                try:
-                    lowers = fixed_df["Lower"].astype(int).tolist()
-                    uppers = fixed_df["Upper"].astype(int).tolist()
-                    breaks = [lowers[-1]] + uppers
-                except:
-                    st.error("⚠️ Please enter valid numeric values.")
-                    breaks = auto_breaks
+                # Step 4: Convert to breaks (rows → breaks)
+                lowers = fixed_df["Lower"].astype(int).tolist()
+                uppers = fixed_df["Upper"].astype(int).tolist()
+                breaks = [lowers[-1]] + uppers   # no mismatch warning
 
                 # Step 5: Generate binning table
                 if st.button("📋 Generate Binning Table", type="primary"):
