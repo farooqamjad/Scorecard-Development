@@ -1948,19 +1948,21 @@ if menu == "🛠️ Scorecard Development":
                     key="editor"
                 )
 
-                # Step 5: Auto-fix continuity (Lower[i] → Upper[i+1])
+                # Step 5: Auto-fix continuity (Lower[i] → Upper[i-1])
                 fixed_df = edited_ranges_df.copy()
                 for i in range(1, len(fixed_df)):
                     fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
 
-                # ✅ overwrite session_state so next rerun has fixed table
-                st.session_state.ranges_df = fixed_df
+                # 🔄 Force immediate update
+                if not fixed_df.equals(st.session_state.ranges_df):
+                    st.session_state.ranges_df = fixed_df
+                    st.experimental_rerun()
 
-                # Step 6: Convert back to breaks
+                # Step 6: Convert back to breaks (NO set(), NO sorted)
                 try:
                     lowers = fixed_df["Lower"].astype(int).tolist()
                     uppers = fixed_df["Upper"].astype(int).tolist()
-                    breaks = sorted(list(set([lowers[-1]] + uppers)))
+                    breaks = [lowers[-1]] + uppers
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
