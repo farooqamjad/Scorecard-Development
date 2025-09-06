@@ -1930,14 +1930,14 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Initialize session_state for bin ranges
+                # Initialize ranges if not present or bins changed
                 if ("adjusted_ranges_df" not in st.session_state) or (len(st.session_state.adjusted_ranges_df) != num_bins):
                     bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                     ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
                     ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
                     st.session_state.adjusted_ranges_df = ranges_df
 
-                # Show editable table
+                # Editable table
                 edited_df = st.data_editor(
                     st.session_state.adjusted_ranges_df,
                     use_container_width=True,
@@ -1945,24 +1945,20 @@ if menu == "🛠️ Scorecard Development":
                     num_rows=num_bins
                 )
 
-                # Detect change → trigger rerun
-                if not edited_df.equals(st.session_state.adjusted_ranges_df):
-                    st.session_state.adjusted_ranges_df = edited_df
-                    st.session_state.update_trigger = True
-                    st.rerun()   # ⚡ live update
+                # 🚀 Apply cascading immediately on edited version
+                adjusted_df = edited_df.copy()
+                for i in range(len(adjusted_df) - 1):
+                    adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]   # lower → upper
+                for i in range(len(adjusted_df) - 1, 0, -1):
+                    adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]   # upper → lower
 
-                # Apply cascading logic
-                df = st.session_state.adjusted_ranges_df.copy()
-                for i in range(len(df) - 1):
-                    df.loc[i+1, "Upper"] = df.loc[i, "Lower"]
-                for i in range(len(df) - 1, 0, -1):
-                    df.loc[i-1, "Lower"] = df.loc[i, "Upper"]
-                st.session_state.adjusted_ranges_df = df
+                # Save back to session_state (so table instantly updates)
+                st.session_state.adjusted_ranges_df = adjusted_df
 
                 # Build breaks
                 try:
-                    lowers = df["Lower"].astype(int).tolist()
-                    uppers = df["Upper"].astype(int).tolist()
+                    lowers = adjusted_df["Lower"].astype(int).tolist()
+                    uppers = adjusted_df["Upper"].astype(int).tolist()
                     breaks = [lowers[-1]] + uppers[::-1]
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
@@ -1973,12 +1969,14 @@ if menu == "🛠️ Scorecard Development":
                     pd_train = st.session_state.glm_fit.predict(
                         sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
                     )
+
                     tbf = generate_binning_table(
                         st.session_state.scores,
                         st.session_state.cdata_filtered['target'],
                         pd_train,
                         breaks
                     )
+
                     st.dataframe(tbf, use_container_width=True)
                     st.session_state.final_breaks = breaks
                     st.session_state.binning_table = tbf
