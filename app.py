@@ -1927,33 +1927,27 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Build default ranges
+                # Build ranges (descending)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                # 🔄 Maintain session state for ranges
-                if "ranges_df" not in st.session_state:
-                    st.session_state.ranges_df = ranges_df.copy()
-
                 st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
-                    st.session_state.ranges_df,
+                    ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="dynamic"
+                    num_rows="dynamic"   # ✅ user can add/remove rows → bins change
                 )
 
-                # 🔄 Cascade fix inside session state
-                if not edited_ranges_df.equals(st.session_state.ranges_df):
-                    for i in range(len(edited_ranges_df) - 1):
-                        edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
-                    st.session_state.ranges_df = edited_ranges_df.copy()
+                # 🔄 Auto-fix continuity (cascade lower-upper)
+                for i in range(len(edited_ranges_df) - 1):
+                    edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
 
                 # Step 4: Build breaks
                 try:
-                    lowers = st.session_state.ranges_df["Lower"].astype(int).tolist()
-                    uppers = st.session_state.ranges_df["Upper"].astype(int).tolist()
+                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
+                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
 
                     breaks = [min(lowers)] + uppers
                     breaks = sorted(set(breaks))
@@ -1980,7 +1974,6 @@ if menu == "🛠️ Scorecard Development":
                     # Save in session
                     st.session_state.final_breaks = breaks
                     st.session_state.binning_table = tbf
-
 
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
