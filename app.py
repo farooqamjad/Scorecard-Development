@@ -1982,9 +1982,6 @@ if menu == "🛠️ Scorecard Development":
 
                             st.dataframe(tbf, use_container_width=True)
 
-                except Exception as e:
-                    st.error(f"⚠️ Error syncing bin ranges: {e}")
-
                         # 📈 Line chart
                         fig = go.Figure()
 
