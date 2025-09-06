@@ -2001,13 +2001,13 @@ if menu == "🛠️ Scorecard Development":
                 if "original_data" in st.session_state and not st.session_state.original_data.empty:
                     df = st.session_state.original_data.copy()
 
-                        st.markdown("""
-                        ⚠️ **Important:** Please select the following columns in this exact order:  
-                        1️⃣ Loan Number (Unique ID)  
-                        2️⃣ Limit  
-                        3️⃣ M+6/M+12 (Performance Window last column)  
-                        4️⃣ Target Variable
-                        """)
+                    st.markdown("""
+                    ⚠️ **Important:** Please select the following columns in this exact order:  
+                    1️⃣ Loan Number (Unique ID)  
+                    2️⃣ Limit  
+                    3️⃣ M+6/M+12 (Performance Window last column)  
+                    4️⃣ Target Variable
+                    """)
 
                     selected_cols = st.multiselect(
                         "Select columns:",
