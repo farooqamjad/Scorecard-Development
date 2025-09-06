@@ -1937,21 +1937,28 @@ if menu == "🛠️ Scorecard Development":
                     ranges_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="dynamic"   # ✅ user can add/remove rows → bins change
+                    num_rows="dynamic"
                 )
 
-                # 🔄 Auto-fix continuity (cascade lower-upper both ways)
-                for i in range(len(edited_ranges_df) - 1):
-                    edited_ranges_df.loc[i+1, "Upper"] = edited_ranges_df.loc[i, "Lower"]
+                # ✅ Step 2: Make a working copy to apply cascading
+                adjusted_df = edited_ranges_df.copy()
 
-                for i in range(len(edited_ranges_df) - 1, 0, -1):
-                    edited_ranges_df.loc[i-1, "Lower"] = edited_ranges_df.loc[i, "Upper"]
+                # 🔄 Cascade lower → upper
+                for i in range(len(adjusted_df) - 1):
+                    adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
+
+                # 🔄 Cascade upper → lower (reverse direction)
+                for i in range(len(adjusted_df) - 1, 0, -1):
+                    adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
+
+                # ✅ Step 3: Show live-updated adjusted table
+                st.markdown("### 🔄 Live Adjusted Ranges")
+                st.dataframe(adjusted_df, use_container_width=True)
 
                 # Step 4: Build breaks
                 try:
-                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
-                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
-
+                    lowers = adjusted_df["Lower"].astype(int).tolist()
+                    uppers = adjusted_df["Upper"].astype(int).tolist()
                     breaks = [min(lowers)] + uppers
                     breaks = sorted(set(breaks))
                 except:
