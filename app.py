@@ -1873,23 +1873,19 @@ if menu == "🛠️ Scorecard Development":
                     st.success("✅ Scorecard Developed Successfully!")
 
         def generate_binning_table(scores, labels, pred_probs, breaks):
-            # Create DataFrame
             tb = pd.DataFrame({
                 'score': scores['score'],
                 'pd': pred_probs,
                 'target': labels.astype(int)
             })
 
-            # Ensure min/max coverage
-            score_min = tb['score'].min()
-            score_max = tb['score'].max()
-            breaks[0] = min(breaks[0], score_min)
-            breaks[-1] = max(breaks[-1], score_max)
+            # ✅ Ensure strictly monotonic
+            breaks_sorted = sorted(set(breaks))
 
-            # ✅ Always sort breaks ascending before pd.cut
-            breaks_sorted = sorted(breaks)
+            if len(breaks_sorted) < 2:
+                raise ValueError("Not enough unique breakpoints to form bins.")
 
-            # Assign bins
+            # Cut
             tb['Bins'] = pd.cut(tb['score'], bins=breaks_sorted, include_lowest=True, right=True)
             tb['Bins'] = tb['Bins'].astype(str)
 
@@ -1899,15 +1895,14 @@ if menu == "🛠️ Scorecard Development":
             minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
             maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
-            # Merge
             tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-            # Column order
+            # Reorder columns
             tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
 
-            # ✅ Force descending order for display
+            # ✅ Force descending by lower bound
             tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
             tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
             tbf.reset_index(drop=True, inplace=True)
@@ -1915,7 +1910,6 @@ if menu == "🛠️ Scorecard Development":
             tbf.index.name = "S.No"
 
             return tbf
-
 
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
@@ -1964,7 +1958,12 @@ if menu == "🛠️ Scorecard Development":
                 # Step 4: Convert to breaks (rows → breaks)
                 lowers = fixed_df["Lower"].astype(int).tolist()
                 uppers = fixed_df["Upper"].astype(int).tolist()
-                breaks = [lowers[-1]] + uppers   # no mismatch warning
+
+                # ✅ breaks must cover full range: [lowest lower, all uppers...]
+                breaks = [min(lowers)] + uppers
+
+                # ✅ ensure strictly increasing
+                breaks = sorted(set(breaks))
 
                 # Step 5: Generate binning table
                 if st.button("📋 Generate Binning Table", type="primary"):
