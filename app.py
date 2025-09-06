@@ -1923,17 +1923,23 @@ if menu == "🛠️ Scorecard Development":
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
                 st.markdown("### ✂️ Adjust Bin Breaks")
-                user_breaks = st.text_area(
-                    "Enter bin edges (comma separated):",
-                    value=", ".join([str(round(x, 2)) for x in auto_breaks])
+
+                # Convert auto breaks into DataFrame (line-wise editable)
+                breaks_df = pd.DataFrame({"Bin_Edges": auto_breaks})
+
+                # Show editable table
+                edited_breaks_df = st.data_editor(
+                    breaks_df,
+                    num_rows="dynamic",  # user can add/remove rows if needed
+                    use_container_width=True,
+                    hide_index=True
                 )
 
-                # Step 3: Parse user breaks
+                # Parse user edits
                 try:
-                    breaks = [float(x.strip()) for x in user_breaks.split(",")]
-                    breaks = sorted(list(set(breaks)))
+                    breaks = sorted(list(set(edited_breaks_df["Bin_Edges"].astype(float).tolist())))
                 except:
-                    st.error("⚠️ Please enter valid numeric breaks separated by commas.")
+                    st.error("⚠️ Please enter valid numeric bin edges.")
                     breaks = auto_breaks
 
                 if len(breaks) < 2:
