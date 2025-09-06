@@ -1916,6 +1916,7 @@ if menu == "🛠️ Scorecard Development":
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
 
+                # Step 1: Initial number of bins (only as a starting point)
                 num_bins = st.number_input(
                     "🧮 Define Number of Bins",
                     min_value=3,
@@ -1929,36 +1930,36 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 2: Build ranges (descending)
+                # Step 3: Build ranges DataFrame (descending order)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-                init_ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                init_ranges_df = init_ranges_df.round(0).astype(int)
-                init_ranges_df = init_ranges_df.iloc[::-1].reset_index(drop=True)
+                ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
+                ranges_df = ranges_df.round(0).astype(int)
+                ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                # Step 3: Put in session_state if not exists
+                # Save ranges in session if not already
                 if "ranges_df" not in st.session_state:
-                    st.session_state.ranges_df = init_ranges_df.copy()
+                    st.session_state.ranges_df = ranges_df
 
-                # Step 4: Show editor
                 st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
                     st.session_state.ranges_df,
                     use_container_width=True,
                     hide_index=True,
+                    num_rows="dynamic",   # ✅ user can add/remove rows
                     key="editor"
                 )
 
-                # Step 5: Auto-fix continuity (Lower[i] → Upper[i-1])
+                # 🔄 Auto-fix continuity (Lower[i] → Upper[i-1])
                 fixed_df = edited_ranges_df.copy()
                 for i in range(1, len(fixed_df)):
                     fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
 
-                # 🔄 Force immediate update
+                # ✅ Overwrite immediately
                 if not fixed_df.equals(st.session_state.ranges_df):
                     st.session_state.ranges_df = fixed_df
-                    st.experimental_rerun()
+                    st.rerun()
 
-                # Step 6: Convert back to breaks (NO set(), NO sorted)
+                # Step 4: Convert back to breaks (based on rows, not num_bins)
                 try:
                     lowers = fixed_df["Lower"].astype(int).tolist()
                     uppers = fixed_df["Upper"].astype(int).tolist()
@@ -1967,23 +1968,22 @@ if menu == "🛠️ Scorecard Development":
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # Step 7: Ensure correct number of bins
-                if len(breaks) - 1 != num_bins:
-                    st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
-                else:
-                    if st.button("📋 Generate Binning Table", type="primary"):
-                        pd_train = st.session_state.glm_fit.predict(
-                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
-                        )
+                # Step 5: Generate binning table
+                if st.button("📋 Generate Binning Table", type="primary"):
+                    pd_train = st.session_state.glm_fit.predict(
+                        sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                    )
 
-                        tbf = generate_binning_table(
-                            st.session_state.scores,
-                            st.session_state.cdata_filtered['target'],
-                            pd_train,
-                            breaks
-                        )
+                    tbf = generate_binning_table(
+                        st.session_state.scores,
+                        st.session_state.cdata_filtered['target'],
+                        pd_train,
+                        breaks
+                    )
 
-                        st.dataframe(tbf, use_container_width=True)
+                    st.dataframe(tbf, use_container_width=True)
+
+
                         # 📈 Line chart
                         fig = go.Figure()
 
