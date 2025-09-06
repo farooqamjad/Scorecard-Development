@@ -1933,23 +1933,38 @@ if menu == "🛠️ Scorecard Development":
                 # Step 3: Build ranges DataFrame (descending order)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                ranges_df = ranges_df.round(0).astype(int)   # ✅ no decimals
+                ranges_df = ranges_df.round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                st.markdown("### ✂️ Adjust Bin Ranges")
-                edited_ranges_df = st.data_editor(
-                    ranges_df,
+                st.markdown("### ✂️ Adjust Bin Ranges (Edit Upper Only)")
+                editable_df = ranges_df.copy()
+                editable_df["Lower"] = None  # placeholder
+
+                # Only Upper is editable
+                edited_df = st.data_editor(
+                    editable_df[["Upper"]],
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    num_rows="fixed"
                 )
 
-                # Step 4: Convert back to breaks
+                # Rebuild Lower column from edited Upper
                 try:
-                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
-                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
+                    edited_uppers = edited_df["Upper"].astype(int).tolist()
+                    edited_lowers = [edited_uppers[i+1] for i in range(len(edited_uppers)-1)] + [min_score]
+                    edited_lowers = edited_lowers[::-1]  # reverse to match descending order
+                    edited_uppers = edited_uppers[::-1]
 
-                    # Rebuild breaks: lowest lower + all uppers
-                    breaks = sorted(list(set([lowers[-1]] + uppers)))
+                    synced_df = pd.DataFrame({
+                        "Lower": edited_lowers,
+                        "Upper": edited_uppers
+                    })
+
+                    st.markdown("### ✅ Synced Bin Ranges")
+                    st.dataframe(synced_df, use_container_width=True)
+
+                    # Step 4: Convert to breaks
+                    breaks = sorted(list(set([edited_lowers[-1]] + edited_uppers)))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
