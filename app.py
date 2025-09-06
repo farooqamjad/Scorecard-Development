@@ -1918,7 +1918,7 @@ if menu == "🛠️ Scorecard Development":
             with st.expander("📐 Model Calibration", expanded=False):
 
                 num_bins = st.number_input(
-                    "Define Number of Bins",
+                    "🧮 Define Number of Bins",
                     min_value=3,
                     max_value=20,
                     value=10,
@@ -1958,7 +1958,7 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) - 1 != num_bins:
                     st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
-                    if st.button("Generate Binning Table", type="primary"):
+                    if st.button("📋 Generate Binning Table", type="primary"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
                         )
