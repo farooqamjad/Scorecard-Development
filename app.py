@@ -1930,46 +1930,54 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Step 3: Build ranges DataFrame (descending order)
+                # Step 3: Build initial bin ranges (descending order)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
                 ranges_df = ranges_df.round(0).astype(int)
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                st.markdown("### ✂️ Adjust Bin Ranges (Edit Upper Only)")
-                editable_df = ranges_df.copy()
-                editable_df["Lower"] = None  # placeholder
+                st.markdown("### ✂️ Adjust Bin Ranges")
 
-                # Only Upper is editable
+                # Step 4: Prepare editable table (Upper editable, Lower auto-sync)
+                editable_df = ranges_df.copy()
+                editable_df["Lower"] = None  # placeholder for recalculation
+                editable_df = editable_df[["Upper", "Lower"]]  # show Upper first
+
+                # Step 5: Show editable table
                 edited_df = st.data_editor(
-                    editable_df[["Upper"]],
+                    editable_df,
                     use_container_width=True,
                     hide_index=True,
-                    num_rows="fixed"
+                    num_rows="fixed",
+                    column_config={
+                        "Upper": st.column_config.NumberColumn("Upper", step=1),
+                        "Lower": st.column_config.NumberColumn("Lower", disabled=True)
+                    }
                 )
 
-                # Rebuild Lower column from edited Upper
+                # Step 6: Recalculate Lower column based on edited Upper
                 try:
                     edited_uppers = edited_df["Upper"].astype(int).tolist()
                     edited_lowers = [edited_uppers[i+1] for i in range(len(edited_uppers)-1)] + [min_score]
-                    edited_lowers = edited_lowers[::-1]  # reverse to match descending order
+                    edited_lowers = edited_lowers[::-1]
                     edited_uppers = edited_uppers[::-1]
 
                     synced_df = pd.DataFrame({
-                        "Lower": edited_lowers,
-                        "Upper": edited_uppers
+                        "Upper": edited_uppers,
+                        "Lower": edited_lowers
                     })
 
-                    st.markdown("### ✅ Synced Bin Ranges")
+                    synced_df = synced_df[["Lower", "Upper"]]  # final order
+                    breaks = sorted(list(set([edited_lowers[-1]] + edited_uppers)))
+
+                    # Show synced table directly
                     st.dataframe(synced_df, use_container_width=True)
 
-                    # Step 4: Convert to breaks
-                    breaks = sorted(list(set([edited_lowers[-1]] + edited_uppers)))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # Step 5: Ensure correct number of bins
+                # Step 7: Validate bin count
                 if len(breaks) - 1 != num_bins:
                     st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
@@ -1985,7 +1993,6 @@ if menu == "🛠️ Scorecard Development":
                             breaks
                         )
 
-                        # Show table
                         st.dataframe(tbf, use_container_width=True)
 
                         # 📈 Line chart
