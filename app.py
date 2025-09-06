@@ -1918,8 +1918,8 @@ if menu == "🛠️ Scorecard Development":
                 )
 
                 # Step 2: Auto bin edges
-                min_score = st.session_state.scores['score'].min()
-                max_score = st.session_state.scores['score'].max()
+                min_score = int(st.session_state.scores['score'].min())
+                max_score = int(st.session_state.scores['score'].max())
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
                 # Build bin ranges (lower, upper)
@@ -1927,9 +1927,10 @@ if menu == "🛠️ Scorecard Development":
 
                 # Convert to DataFrame and reverse order (descending)
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
+                ranges_df = ranges_df.round(0).astype(int)   # ✅ remove decimals
                 ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
-                st.markdown("### ✂️ Adjust Bin Ranges")
+                st.markdown("### ✂️ Adjust Bin Ranges (Descending Order)")
 
                 # Editable table
                 edited_ranges_df = st.data_editor(
@@ -1940,9 +1941,8 @@ if menu == "🛠️ Scorecard Development":
 
                 # Convert back to breaks list
                 try:
-                    lowers = edited_ranges_df["Lower"].astype(float).tolist()
-                    uppers = edited_ranges_df["Upper"].astype(float).tolist()
-                    # Combine back into sorted breaks
+                    lowers = edited_ranges_df["Lower"].astype(int).tolist()
+                    uppers = edited_ranges_df["Upper"].astype(int).tolist()
                     breaks = sorted(list(set(lowers + [uppers[-1]])))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
