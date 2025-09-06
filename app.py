@@ -1913,129 +1913,128 @@ if menu == "🛠️ Scorecard Development":
 
             return tbf
 
-            if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
-                with st.expander("📐 Model Calibration", expanded=False):
+        if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
+            with st.expander("📐 Model Calibration", expanded=False):
 
-                    # Step 1: Initial number of bins (only as a starting point)
-                    num_bins = st.number_input(
-                        "🧮 Define Number of Bins",
-                        min_value=3,
-                        max_value=20,
-                        value=10,
-                        step=1
+                # Step 1: Initial number of bins (only as a starting point)
+                num_bins = st.number_input(
+                    "🧮 Define Number of Bins",
+                    min_value=3,
+                    max_value=20,
+                    value=10,
+                    step=1
+                )
+
+                # Step 2: Generate auto bin edges
+                min_score = st.session_state.scores['score'].min()
+                max_score = st.session_state.scores['score'].max()
+                auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
+
+                # Step 3: Build ranges DataFrame (descending order)
+                bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
+                ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
+                ranges_df = ranges_df.round(0).astype(int)
+                ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
+
+                # Save ranges in session if not already
+                if "ranges_df" not in st.session_state:
+                    st.session_state.ranges_df = ranges_df
+
+                st.markdown("### ✂️ Adjust Bin Ranges")
+                edited_ranges_df = st.data_editor(
+                    st.session_state.ranges_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    num_rows="dynamic",   # ✅ user can add/remove rows
+                    key="editor"
+                )
+
+                # 🔄 Auto-fix continuity (Lower[i] → Upper[i-1])
+                fixed_df = edited_ranges_df.copy()
+                for i in range(1, len(fixed_df)):
+                    fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
+
+                # ✅ Overwrite immediately
+                if not fixed_df.equals(st.session_state.ranges_df):
+                    st.session_state.ranges_df = fixed_df
+                    st.rerun()
+
+                # Step 4: Convert back to breaks (based on rows, not num_bins)
+                try:
+                    lowers = fixed_df["Lower"].astype(int).tolist()
+                    uppers = fixed_df["Upper"].astype(int).tolist()
+                    breaks = [lowers[-1]] + uppers
+                except:
+                    st.error("⚠️ Please enter valid numeric values.")
+                    breaks = auto_breaks
+
+                # Step 5: Generate binning table
+                if st.button("📋 Generate Binning Table", type="primary"):
+                    pd_train = st.session_state.glm_fit.predict(
+                        sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
                     )
 
-                    # Step 2: Generate auto bin edges
-                    min_score = st.session_state.scores['score'].min()
-                    max_score = st.session_state.scores['score'].max()
-                    auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
-
-                    # Step 3: Build ranges DataFrame (descending order)
-                    bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-                    ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
-                    ranges_df = ranges_df.round(0).astype(int)
-                    ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
-
-                    # Save ranges in session if not already
-                    if "ranges_df" not in st.session_state:
-                        st.session_state.ranges_df = ranges_df
-
-                    st.markdown("### ✂️ Adjust Bin Ranges")
-                    edited_ranges_df = st.data_editor(
-                        st.session_state.ranges_df,
-                        use_container_width=True,
-                        hide_index=True,
-                        num_rows="dynamic",   # ✅ user can add/remove rows
-                        key="editor"
+                    tbf = generate_binning_table(
+                        st.session_state.scores,
+                        st.session_state.cdata_filtered['target'],
+                        pd_train,
+                        breaks
                     )
 
-                    # 🔄 Auto-fix continuity (Lower[i] → Upper[i-1])
-                    fixed_df = edited_ranges_df.copy()
-                    for i in range(1, len(fixed_df)):
-                        fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
+                    st.dataframe(tbf, use_container_width=True)
 
-                    # ✅ Overwrite immediately
-                    if not fixed_df.equals(st.session_state.ranges_df):
-                        st.session_state.ranges_df = fixed_df
-                        st.rerun()
+                    # 📈 Line chart
+                    fig = go.Figure()
 
-                    # Step 4: Convert back to breaks (based on rows, not num_bins)
-                    try:
-                        lowers = fixed_df["Lower"].astype(int).tolist()
-                        uppers = fixed_df["Upper"].astype(int).tolist()
-                        breaks = [lowers[-1]] + uppers
-                    except:
-                        st.error("⚠️ Please enter valid numeric values.")
-                        breaks = auto_breaks
+                    # Line + markers + labels
+                    fig.add_trace(go.Scatter(
+                        x=tbf["Bins"],
+                        y=tbf["Total"],
+                        mode="lines+markers+text",
+                        name="Total",
+                        text=[f"{val:,}" for val in tbf["Total"]],
+                        textposition="top center",  # slightly above the point
+                        marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
+                        line=dict(width=2.5, color="royalblue"),
+                        hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"  # clean hover
+                    ))
 
-                    # Step 5: Generate binning table
-                    if st.button("📋 Generate Binning Table", type="primary"):
-                        pd_train = st.session_state.glm_fit.predict(
-                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
-                        )
+                    # Layout styling
+                    fig.update_layout(
+                        title=dict(
+                            text="📈 Total Count per Bin",
+                            x=0.5,
+                            xanchor="center",
+                            font=dict(size=16, color="darkblue")
+                        ),
+                        xaxis_title="Bins (Score Ranges)",
+                        yaxis_title="Total Count",
+                        plot_bgcolor="rgba(255,255,255,1)",  # pure white background
+                        paper_bgcolor="rgba(255,255,255,1)", # remove outer shading
+                        font=dict(size=13),
+                        hovermode="x unified",
+                        showlegend=False,
+                        margin=dict(t=60, b=40, l=40, r=40)
+                    )
 
-                        tbf = generate_binning_table(
-                            st.session_state.scores,
-                            st.session_state.cdata_filtered['target'],
-                            pd_train,
-                            breaks
-                        )
+                    # Gridlines completely removed
+                    fig.update_xaxes(
+                        showgrid=False,
+                        tickangle=-45,
+                        tickfont=dict(size=11),
+                        showticklabels=True
+                    )
+                    fig.update_yaxes(
+                        showgrid=False,
+                        tickfont=dict(size=11)
+                    )
 
-                        st.dataframe(tbf, use_container_width=True)
+                    # Display chart
+                    st.plotly_chart(fig, use_container_width=True)
 
-
-                        # 📈 Line chart
-                        fig = go.Figure()
-
-                        # Line + markers + labels
-                        fig.add_trace(go.Scatter(
-                            x=tbf["Bins"],
-                            y=tbf["Total"],
-                            mode="lines+markers+text",
-                            name="Total",
-                            text=[f"{val:,}" for val in tbf["Total"]],
-                            textposition="top center",  # slightly above the point
-                            marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
-                            line=dict(width=2.5, color="royalblue"),
-                            hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"  # clean hover
-                        ))
-
-                        # Layout styling
-                        fig.update_layout(
-                            title=dict(
-                                text="📈 Total Count per Bin",
-                                x=0.5,
-                                xanchor="center",
-                                font=dict(size=16, color="darkblue")
-                            ),
-                            xaxis_title="Bins (Score Ranges)",
-                            yaxis_title="Total Count",
-                            plot_bgcolor="rgba(255,255,255,1)",  # pure white background
-                            paper_bgcolor="rgba(255,255,255,1)", # remove outer shading
-                            font=dict(size=13),
-                            hovermode="x unified",
-                            showlegend=False,
-                            margin=dict(t=60, b=40, l=40, r=40)
-                        )
-
-                        # Gridlines completely removed
-                        fig.update_xaxes(
-                            showgrid=False,
-                            tickangle=-45,
-                            tickfont=dict(size=11),
-                            showticklabels=True
-                        )
-                        fig.update_yaxes(
-                            showgrid=False,
-                            tickfont=dict(size=11)
-                        )
-
-                        # Display chart
-                        st.plotly_chart(fig, use_container_width=True)
-
-                        # Save in session
-                        st.session_state.final_breaks = breaks
-                        st.session_state.binning_table = tbf
+                    # Save in session
+                    st.session_state.final_breaks = breaks
+                    st.session_state.binning_table = tbf
 
 
 
