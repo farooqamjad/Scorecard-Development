@@ -1934,35 +1934,26 @@ if menu == "🛠️ Scorecard Development":
                     ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
                     st.session_state.adjusted_ranges_df = ranges_df
 
-                # ⚡ Live editable table with cascading effect
-                edited_df = st.data_editor(
+                # ⚡ Show editable table (live updates happen here)
+                st.session_state.adjusted_ranges_df = st.data_editor(
                     st.session_state.adjusted_ranges_df,
                     use_container_width=True,
                     hide_index=True,
                     num_rows=num_bins
                 )
 
-                # Apply cascading logic immediately
-                adjusted_df = edited_df.copy()
+                # Apply cascading logic immediately in same table
+                df = st.session_state.adjusted_ranges_df.copy()
+                for i in range(len(df) - 1):
+                    df.loc[i+1, "Upper"] = df.loc[i, "Lower"]       # Lower → upper
+                for i in range(len(df) - 1, 0, -1):
+                    df.loc[i-1, "Lower"] = df.loc[i, "Upper"]       # Upper → lower
+                st.session_state.adjusted_ranges_df = df             # Update live table
 
-                # Cascade lower → upper (top-down)
-                for i in range(len(adjusted_df) - 1):
-                    adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
-
-                # Cascade upper → lower (bottom-up)
-                for i in range(len(adjusted_df) - 1, 0, -1):
-                    adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
-
-                # Update session_state so live table itself updates instantly
-                st.session_state.adjusted_ranges_df = adjusted_df
-
-                # Show live updated table (same table)
-                st.dataframe(adjusted_df, use_container_width=True)
-
-                # Build breaks exactly matching num_bins
+                # Build breaks from same table
                 try:
-                    lowers = adjusted_df["Lower"].astype(int).tolist()
-                    uppers = adjusted_df["Upper"].astype(int).tolist()
+                    lowers = df["Lower"].astype(int).tolist()
+                    uppers = df["Upper"].astype(int).tolist()
                     breaks = [lowers[-1]] + uppers[::-1]
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
@@ -1981,10 +1972,7 @@ if menu == "🛠️ Scorecard Development":
                         breaks
                     )
 
-                    # Show final table
                     st.dataframe(tbf, use_container_width=True)
-
-                    # Save in session
                     st.session_state.final_breaks = breaks
                     st.session_state.binning_table = tbf
 
