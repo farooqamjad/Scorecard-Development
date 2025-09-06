@@ -1981,11 +1981,30 @@ if menu == "🛠️ Scorecard Development":
                             markers=True,
                             title="📈 Total Count per Bin"
                         )
+
+                        # Add labels for each point
+                        fig.update_traces(
+                            text=tbf["Total"],
+                            textposition="top center",
+                            marker=dict(size=10, color="blue"),   # bigger blue markers
+                            line=dict(width=3, color="royalblue") # thicker line
+                        )
+
+                        # Layout styling
                         fig.update_layout(
                             xaxis_title="Bins (Score Ranges)",
                             yaxis_title="Total Count",
-                            xaxis_tickangle=-45
+                            xaxis_tickangle=-45,
+                            plot_bgcolor="white",
+                            font=dict(size=12),
+                            title=dict(x=0.5, xanchor="center"),   # center title
+                            hovermode="x unified"
                         )
+
+                        # Gridline styling
+                        fig.update_xaxes(showgrid=True, gridwidth=0.5, gridcolor="lightgrey")
+                        fig.update_yaxes(showgrid=True, gridwidth=0.5, gridcolor="lightgrey")
+
                         st.plotly_chart(fig, use_container_width=True)
 
                         # Save in session
