@@ -1922,9 +1922,12 @@ if menu == "🛠️ Scorecard Development":
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Build ranges (pair lower-upper into intervals)
+                # Build bin ranges (lower, upper)
                 bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
+
+                # Convert to DataFrame and reverse order (descending)
                 ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"])
+                ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
 
                 st.markdown("### ✂️ Adjust Bin Ranges")
 
@@ -1935,11 +1938,12 @@ if menu == "🛠️ Scorecard Development":
                     hide_index=True
                 )
 
-                # Parse user edits back into breaks
+                # Convert back to breaks list
                 try:
-                    lower_vals = edited_ranges_df["Lower"].astype(float).tolist()
-                    upper_vals = edited_ranges_df["Upper"].astype(float).tolist()
-                    breaks = sorted(list(set(lower_vals + [upper_vals[-1]])))  # combine lowers + last upper
+                    lowers = edited_ranges_df["Lower"].astype(float).tolist()
+                    uppers = edited_ranges_df["Upper"].astype(float).tolist()
+                    # Combine back into sorted breaks
+                    breaks = sorted(list(set(lowers + [uppers[-1]])))
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
