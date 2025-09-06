@@ -1958,7 +1958,7 @@ if menu == "🛠️ Scorecard Development":
                 if len(breaks) - 1 != num_bins:
                     st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
-                    if st.button("Generate Binning Table"):
+                    if st.button("Generate Binning Table", type= "Primary"):
                         pd_train = st.session_state.glm_fit.predict(
                             sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
                         )
