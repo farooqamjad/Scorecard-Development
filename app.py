@@ -1934,31 +1934,35 @@ if menu == "🛠️ Scorecard Development":
                     ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
                     st.session_state.adjusted_ranges_df = ranges_df
 
-                # Show editable table (live update)
-                st.session_state.adjusted_ranges_df = st.data_editor(
+                # ⚡ Live editable table with cascading effect
+                edited_df = st.data_editor(
                     st.session_state.adjusted_ranges_df,
                     use_container_width=True,
                     hide_index=True,
                     num_rows=num_bins
                 )
 
-                # Apply cascading lower → upper
-                adjusted_df = st.session_state.adjusted_ranges_df.copy()
+                # Apply cascading logic immediately
+                adjusted_df = edited_df.copy()
+
+                # Cascade lower → upper (top-down)
                 for i in range(len(adjusted_df) - 1):
                     adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
 
-                # Apply cascading upper → lower (reverse)
+                # Cascade upper → lower (bottom-up)
                 for i in range(len(adjusted_df) - 1, 0, -1):
                     adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
 
-                # Update session_state table so live table itself updates
+                # Update session_state so live table itself updates instantly
                 st.session_state.adjusted_ranges_df = adjusted_df
+
+                # Show live updated table (same table)
+                st.dataframe(adjusted_df, use_container_width=True)
 
                 # Build breaks exactly matching num_bins
                 try:
                     lowers = adjusted_df["Lower"].astype(int).tolist()
                     uppers = adjusted_df["Upper"].astype(int).tolist()
-                    # Use exact number of breaks: lowest lower + all uppers
                     breaks = [lowers[-1]] + uppers[::-1]
                 except:
                     st.error("⚠️ Please enter valid numeric values.")
@@ -2015,12 +2019,7 @@ if menu == "🛠️ Scorecard Development":
                     fig.update_xaxes(showgrid=False, tickangle=-45, tickfont=dict(size=11), showticklabels=True)
                     fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
                     st.plotly_chart(fig, use_container_width=True)
-
-                    # Save session
-                    st.session_state.final_breaks = breaks
-                    st.session_state.binning_table = tbf
   
-
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
 
