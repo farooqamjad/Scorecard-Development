@@ -1939,7 +1939,7 @@ if menu == "🛠️ Scorecard Development":
                 if "ranges_df" not in st.session_state:
                     st.session_state.ranges_df = init_ranges_df.copy()
 
-                # Step 4: User edit
+                # Step 4: Show editor
                 st.markdown("### ✂️ Adjust Bin Ranges")
                 edited_ranges_df = st.data_editor(
                     st.session_state.ranges_df,
@@ -1948,19 +1948,15 @@ if menu == "🛠️ Scorecard Development":
                     key="editor"
                 )
 
-                # Step 5: Auto-fix continuity (live update)
+                # Step 5: Auto-fix continuity (Lower[i] → Upper[i+1])
                 fixed_df = edited_ranges_df.copy()
                 for i in range(1, len(fixed_df)):
                     fixed_df.loc[i, "Upper"] = fixed_df.loc[i-1, "Lower"]
 
-                # Overwrite session_state so next rerun keeps it updated
+                # ✅ overwrite session_state so next rerun has fixed table
                 st.session_state.ranges_df = fixed_df
 
-                # Show live-updated editor again (optional mirror preview)
-                st.markdown("### ✅ Synced Bin Ranges")
-                st.dataframe(fixed_df, use_container_width=True)
-
-                # Step 6: Convert to breaks
+                # Step 6: Convert back to breaks
                 try:
                     lowers = fixed_df["Lower"].astype(int).tolist()
                     uppers = fixed_df["Upper"].astype(int).tolist()
@@ -1969,7 +1965,7 @@ if menu == "🛠️ Scorecard Development":
                     st.error("⚠️ Please enter valid numeric values.")
                     breaks = auto_breaks
 
-                # Step 7: Check bins count
+                # Step 7: Ensure correct number of bins
                 if len(breaks) - 1 != num_bins:
                     st.warning(f"⚠️ You selected {num_bins} bins but defined {len(breaks)-1}. Adjust ranges!")
                 else:
@@ -1986,7 +1982,6 @@ if menu == "🛠️ Scorecard Development":
                         )
 
                         st.dataframe(tbf, use_container_width=True)
-
                         # 📈 Line chart
                         fig = go.Figure()
 
