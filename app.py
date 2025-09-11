@@ -326,42 +326,58 @@ def iv_color(status):
     }[status]
 
 
-def build_breaks(df, target_col, manual_breaks):
-    df = df.copy()
+def check_column_types(df, target_col="target"):
+    info = []
+    for col in df.columns:
+        if col == target_col:
+            continue
+        dtype = df[col].dtype
+        sample_values = df[col].dropna().unique()[:10]  # first 10 unique values
+        # Convert sample values list into comma-separated string
+        sample_str = ", ".join(map(str, sample_values))
+        info.append({
+            "Column": col,
+            "Dtype": str(dtype),
+            "Unique Count": df[col].nunique(),
+            "Sample Values": sample_str
+        })
+    return pd.DataFrame(info)
 
-    # Fill missing values early to ensure consistency
-    for col in df.select_dtypes(include=["string", "object", "category"]).columns:
-        df[col] = df[col].fillna("missing")
-
-    breaks_list = manual_breaks.copy()
+def build_breaks(df, target_col, manual_breaks=None):
+    breaks_list = manual_breaks.copy() if manual_breaks else {}
 
     for col in df.columns:
         if col == target_col or col in breaks_list:
             continue
 
+        # ✅ Numeric columns
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 bin_result = sc.woebin(df[[col, target_col]], y=target_col)
                 if bin_result[col]['bin'].nunique() <= 1:
                     breaks_list[col] = [1]
-            except Exception as e:
-                print(f"Numeric binning failed for {col}: {e}")
+            except:
                 continue
 
-        elif pd.api.types.is_string_dtype(df[col]) or isinstance(df[col].dtype, pd.CategoricalDtype):
+        # ✅ Categorical columns (force object type)
+        else:
             try:
-                categories = df[col].unique().tolist()
-                if len(categories) > 1:
-                    breaks_list[col] = categories
+                series = df[col].astype("object")   # 👈 yahan force karna hai
+                categories = series.dropna().unique().tolist()
+                bins = [[str(cat)] for cat in categories if str(cat).lower() != "nan"]
+
+                if series.isna().any() or "missing" not in [str(c).lower() for c in categories]:
+                    bins.append(["missing"])
+
+                if len(bins) > 1:
+                    breaks_list[col] = bins
             except Exception as e:
-                print(f"Category extraction failed for {col}: {e}")
+                print(f"Breaks build fail for {col}: {e}")
                 continue
 
     return breaks_list
 
 def run_woe_iv_with_progress(df, target_col, manual_breaks):
-    for col in df.select_dtypes(include=["category", "object"]).columns:
-        df[col] = df[col].astype("string").fillna("missing")
     breaks_list = build_breaks(df, target_col, manual_breaks)
     total_vars = len([col for col in df.columns if col != target_col])
 
@@ -371,7 +387,8 @@ def run_woe_iv_with_progress(df, target_col, manual_breaks):
     for i, col in enumerate(df.columns):
         if col == target_col:
             continue
-        brks = {col: breaks_list.get(col)} if breaks_list.get(col) is not None else {}
+
+        brks = {col: breaks_list.get(col)} if breaks_list.get(col) else None
 
         binned = sc.woebin(df[[col, target_col]], y=target_col, breaks_list=brks)
         bins.update(binned)
@@ -901,6 +918,10 @@ elif menu == "🎯 Variables Selection":
                             st.warning(f"🗑️ Deleted manual breaks for `{var}`")
                             st.rerun()
 
+            col_info = check_column_types(st.session_state.cdata_aligned, target_col="target")
+            st.write("### Column Type Check")
+            st.dataframe(col_info, use_container_width=True)
+
             if st.button("⚙️ Run WOE Transformation", type="primary", key="btn_run_iv"):
                 progress_text = "🔄 Processing WOE Transformation"
                 my_bar = st.progress(0, text=progress_text)
@@ -923,12 +944,10 @@ elif menu == "🎯 Variables Selection":
                         if update.get("done"):
                             st.session_state.final_woe_data = sc.woebin_ply(st.session_state.cdata_aligned, update["bins"])
                             st.session_state.woe_iv_result = (update["bins"], update["iv_summary"], update["breaks_list"])
+                            st.session_state.breaks_list = update["breaks_list"]
                             break
-
-                        bins.update(update["bins"])
-                        iv_entries.append(update["iv_entry"])
-                        breaks_list[update["variable"]] = update["breaks"]
-                        my_bar.progress(update["progress"], text=f"{progress_text} ({update['variable']})")
+                        else:
+                            my_bar.progress(update["progress"], text=f"🔄 Processing {update['variable']}")
 
                 my_bar.empty()
                 st.session_state.breaks_list = breaks_list
@@ -1586,34 +1605,31 @@ if menu == "🛠️ Scorecard Development":
         style_expander_header()
         with st.expander("🛠️ Scorecard Development", expanded=expander_state):
 
-            with st.form(key="scorecard_form"):
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    points0 = st.number_input("🎯 Base Score (points0)", value=1060, step=1)
-                with col2:
-                    odds0 = st.number_input("⚖️ Base Odds (odds0)", value=1/10.0, format="%.4f")
-                with col3:
-                    pdo = st.number_input("📈 Points to Double Odds (PDO)", value=20, step=1)
+            st.subheader("⚙️ Scorecard Parameters")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                points0 = st.number_input("🎯 Base Score (points0)", value=1060, step=1)
+            with col2:
+                odds0 = st.number_input("⚖️ Base Odds (odds0)", value=1/10.0, format="%.4f")
+            with col3:
+                pdo = st.number_input("📈 Points to Double Odds (PDO)", value=20, step=1)
 
-                run_scorecard = st.form_submit_button("⚙️ Generate Scorecard", type="primary")
+            run_scorecard = st.button("⚙️ Generate Scorecard", type="primary", key="generate_scorecard_btn")
 
-                if run_scorecard:
-                    st.session_state.iv_selection_updated = False
-                    breaks_list = st.session_state.get("breaks_list", None)
+            if run_scorecard:
+                st.session_state.iv_selection_updated = False
+                breaks_list = st.session_state.get("breaks_list", None)
 
-                    with st.spinner("🔄 Generating Scorecard..."):
-                        card, scores, glm_fit, svar, cdata_woe = generate_scorecard(
-                            st.session_state.cdata_filtered, breaks_list, points0, odds0, pdo
-                        )
+                card, scores, glm_fit, svar, cdata_woe = generate_scorecard(
+                    st.session_state.cdata_filtered, breaks_list, points0, odds0, pdo
+                )
 
-                    st.success("✅ Scorecard generated successfully!")
-
-                    # Save in session state
-                    st.session_state.card = card
-                    st.session_state.scores = scores
-                    st.session_state.glm_fit = glm_fit
-                    st.session_state.svar_final = svar
-                    st.session_state.final_cdata_woe = cdata_woe
+                # Save in session state
+                st.session_state.card = card
+                st.session_state.scores = scores
+                st.session_state.glm_fit = glm_fit
+                st.session_state.svar_final = svar
+                st.session_state.final_cdata_woe = cdata_woe
 
             if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
                 card = st.session_state.card
@@ -1872,151 +1888,132 @@ if menu == "🛠️ Scorecard Development":
 
                     st.success("✅ Scorecard Developed Successfully!")
 
-        def generate_binning_table(scores, labels, pred_probs, breaks):
+        def tb_func_dynamic(scores, labels, pred_probs, num_bins=10, min_score=None, max_score=None):
             tb = pd.DataFrame({
                 'score': scores['score'],
                 'pd': pred_probs,
                 'target': labels.astype(int)
             })
 
-            # Ensure strictly increasing
-            breaks_sorted = sorted(set(breaks))
-            if len(breaks_sorted) < 2:
-                raise ValueError("Not enough unique breakpoints to form bins.")
+            # Agar user custom min/max de to use karein warna auto
+            if min_score is None:
+                min_score = tb['score'].min()
+            if max_score is None:
+                max_score = tb['score'].max()
+
+            # Create bin edges dynamically (equal-width bins)
+            bin_edges = np.linspace(min_score, max_score, num_bins + 1)
 
             # Assign bins
-            tb['Bins'] = pd.cut(tb['score'], bins=breaks_sorted, include_lowest=True, right=True)
-            tb['Bins'] = tb['Bins'].astype(str)
+            tb['Bins'] = pd.cut(tb['score'], bins=bin_edges, include_lowest=True)
 
-            # Aggregations
+            # Aggregate stats
             tot = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
             bads = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
             minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
             maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
 
-            # Merge
             tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
             tbf['Goods'] = tbf['Total'] - tbf['Bads']
             tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
 
-            # Column order
             tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
-
-            # Sort by lower bound descending
-            tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
-            tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
-            tbf.reset_index(drop=True, inplace=True)
-            tbf.index = tbf.index + 1
-            tbf.index.name = "S.No"
-
             return tbf
-
-        if "update_trigger" not in st.session_state:
-            st.session_state.update_trigger = False
 
         if "card" in st.session_state and "scores" in st.session_state and "glm_fit" in st.session_state:
             with st.expander("📐 Model Calibration", expanded=False):
+                st.subheader("📊 Binning Analysis")
 
+                # Step 1: Number of bins
                 num_bins = st.number_input(
-                    "🧮 Define Number of Bins",
+                    "Number of Bins",
                     min_value=3,
                     max_value=20,
                     value=10,
                     step=1
                 )
 
-                # Auto-generate equal-width bins
+                # Step 2: Auto bin edges
                 min_score = st.session_state.scores['score'].min()
                 max_score = st.session_state.scores['score'].max()
                 auto_breaks = list(np.linspace(min_score, max_score, num_bins + 1))
 
-                # Initialize ranges if not present or bins changed
-                if ("adjusted_ranges_df" not in st.session_state) or (len(st.session_state.adjusted_ranges_df) != num_bins):
-                    bin_ranges = [(auto_breaks[i], auto_breaks[i+1]) for i in range(len(auto_breaks)-1)]
-                    ranges_df = pd.DataFrame(bin_ranges, columns=["Lower", "Upper"]).round(0).astype(int)
-                    ranges_df = ranges_df.iloc[::-1].reset_index(drop=True)
-                    st.session_state.adjusted_ranges_df = ranges_df
-
-                # Editable table
-                edited_df = st.data_editor(
-                    st.session_state.adjusted_ranges_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    num_rows=num_bins,
-                    key="editor"
+                st.markdown("### ✂️ Adjust Bin Breaks")
+                user_breaks = st.text_area(
+                    "Enter bin edges (comma separated):",
+                    value=", ".join([str(round(x, 2)) for x in auto_breaks])
                 )
 
-                # Check if user made a change
-                if not edited_df.equals(st.session_state.adjusted_ranges_df):
-                    adjusted_df = edited_df.copy()
-
-                    # 🚀 Cascading apply
-                    for i in range(len(adjusted_df) - 1):
-                        adjusted_df.loc[i+1, "Upper"] = adjusted_df.loc[i, "Lower"]
-                    for i in range(len(adjusted_df) - 1, 0, -1):
-                        adjusted_df.loc[i-1, "Lower"] = adjusted_df.loc[i, "Upper"]
-
-                    st.session_state.adjusted_ranges_df = adjusted_df
-                    st.rerun()
-
-                # ✅ Always compute breaks (even if no edit happened)
+                # Step 3: Parse user breaks
                 try:
-                    lowers = st.session_state.adjusted_ranges_df["Lower"].astype(int).tolist()
-                    uppers = st.session_state.adjusted_ranges_df["Upper"].astype(int).tolist()
-                    breaks = [lowers[-1]] + uppers[::-1]
+                    breaks = [float(x.strip()) for x in user_breaks.split(",")]
+                    breaks = sorted(list(set(breaks)))
                 except:
-                    st.error("⚠️ Please enter valid numeric values.")
+                    st.error("⚠️ Please enter valid numeric breaks separated by commas.")
                     breaks = auto_breaks
 
-                # Generate final binning table
-                if st.button("📋 Generate Binning Table", type="primary"):
-                    pd_train = st.session_state.glm_fit.predict(
-                        sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
-                    )
+                if len(breaks) < 2:
+                    st.error("⚠️ At least 2 breaks are required.")
+                else:
+                    if st.button("Generate Binning Table"):
+                        pd_train = st.session_state.glm_fit.predict(
+                            sm.add_constant(st.session_state.final_cdata_woe.drop(columns=['target']))
+                        )
 
-                    tbf = generate_binning_table(
-                        st.session_state.scores,
-                        st.session_state.cdata_filtered['target'],
-                        pd_train,
-                        breaks
-                    )
+                        tb = pd.DataFrame({
+                            'score': st.session_state.scores['score'],
+                            'pd': pd_train,
+                            'target': st.session_state.cdata_filtered['target'].astype(int)
+                        })
 
-                    st.dataframe(tbf, use_container_width=True)
-                    st.session_state.final_breaks = breaks
-                    st.session_state.binning_table = tbf
+                        # Assign bins
+                        tb['Bins'] = pd.cut(tb['score'], bins=breaks, include_lowest=True)
+                        tb['Bins'] = tb['Bins'].astype(str)
+
+                        # Aggregations
+                        tot   = tb.groupby('Bins')['target'].count().reset_index().rename(columns={'target': 'Total'})
+                        bads  = tb.groupby('Bins')['target'].sum().reset_index().rename(columns={'target': 'Bads'})
+                        minpd = tb.groupby('Bins')['pd'].min().reset_index().rename(columns={'pd': 'Min_PD'})
+                        maxpd = tb.groupby('Bins')['pd'].max().reset_index().rename(columns={'pd': 'Max_PD'})
+
+                        # Merge
+                        tbf = tot.merge(bads, on='Bins').merge(minpd, on='Bins').merge(maxpd, on='Bins')
+                        tbf['Goods'] = tbf['Total'] - tbf['Bads']
+                        tbf['Avg_Default_Rate'] = tbf['Bads'] / tbf['Total']
+
+                        # Reorder columns
+                        tbf = tbf[['Bins', 'Goods', 'Bads', 'Total', 'Avg_Default_Rate', 'Min_PD', 'Max_PD']]
+
+                        # ✅ Sort bins descending (higher score → lower score)
+                        tbf['bin_lower'] = tbf['Bins'].str.extract(r'\((.*),')[0].astype(float)
+                        tbf = tbf.sort_values(by='bin_lower', ascending=False).drop(columns=['bin_lower'])
+                        tbf.reset_index(drop=True, inplace=True)
+                        tbf.index = tbf.index + 1
+                        tbf.index.name = "S.No"
+
+                        # Show table
+                        st.dataframe(tbf, use_container_width=True)
+
+                        # 📈 Line chart Total vs Bins
+                        fig = px.line(
+                            tbf,
+                            x="Bins",
+                            y="Total",
+                            markers=True,
+                            title="📈 Total Count per Bin"
+                        )
+                        fig.update_layout(
+                            xaxis_title="Bins (Score Ranges)",
+                            yaxis_title="Total Count",
+                            xaxis_tickangle=-45
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                        # Save in session
+                        st.session_state.final_breaks = breaks
+                        st.session_state.binning_table = tbf
 
 
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=tbf["Bins"],
-                        y=tbf["Total"],
-                        mode="lines+markers+text",
-                        name="Total",
-                        text=[f"{val:,}" for val in tbf["Total"]],
-                        textposition="top center",
-                        marker=dict(size=8, color="royalblue", line=dict(width=1, color="white")),
-                        line=dict(width=2.5, color="royalblue"),
-                        hovertemplate="<b>Bin:</b> %{x}<br><b>Total:</b> %{y:,}<extra></extra>"
-                    ))
-                    fig.update_layout(
-                        title=dict(
-                            text="📈 Total Count per Bin",
-                            x=0.5, xanchor="center",
-                            font=dict(size=16, color="darkblue")
-                        ),
-                        xaxis_title="Bins (Score Ranges)",
-                        yaxis_title="Total Count",
-                        plot_bgcolor="rgba(255,255,255,1)",
-                        paper_bgcolor="rgba(255,255,255,1)",
-                        font=dict(size=13),
-                        hovermode="x unified",
-                        showlegend=False,
-                        margin=dict(t=60, b=40, l=40, r=40)
-                    )
-                    fig.update_xaxes(showgrid=False, tickangle=-45, tickfont=dict(size=11), showticklabels=True)
-                    fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
-                    st.plotly_chart(fig, use_container_width=True)
-  
 
         if "final_breaks" in st.session_state and "binning_table" in st.session_state:
 
@@ -2026,15 +2023,15 @@ if menu == "🛠️ Scorecard Development":
                     df = st.session_state.original_data.copy()
 
                     st.markdown("""
-                    ⚠️ **Important:** Please select the following columns in this exact order:  
-                    1️⃣ Loan Number (Unique ID)  
-                    2️⃣ Limit  
-                    3️⃣ M+6/M+12 (Performance Window last column)  
+                    ⚠️ **Important:** Please select the following columns in this exact order:
+                    1️⃣ Loan Number (Unique ID)
+                    2️⃣ Limit
+                    3️⃣ M+6/M+12 (Performance Window last column)
                     4️⃣ Target Variable
                     """)
 
                     selected_cols = st.multiselect(
-                        "Select columns:",
+                        "Select 4 columns in order (Loan Number, Limit, Performance Window last column, Target):",
                         options=df.columns.tolist(),
                         default=None
                     )
@@ -2054,101 +2051,85 @@ if menu == "🛠️ Scorecard Development":
                         st.session_state.selected_cols = selected_cols
 
                         st.success("✅ Dataframe created successfully!")
-                        st.dataframe(xdt1.head(), use_container_width=True, hide_index=True)
+                        st.dataframe(xdt1.head(), use_container_width=True)
 
-                if "xdt" in st.session_state:
-                    if st.button("🗂️ Map Ratings"):
-                        xdt = st.session_state.xdt.copy()
-                        breaks = st.session_state.final_breaks
+                if "binning_table" in st.session_state and "final_breaks" in st.session_state and "xdt" in st.session_state:
+                    xdt = st.session_state.xdt.copy()
+                    breaks = st.session_state.final_breaks
+                    tb = st.session_state.binning_table
 
-                        obs_col = st.session_state.selected_cols[2].lower()
-                        bin_labels = list(range(len(breaks)-1, 0, -1))
+                    obs_col = st.session_state.selected_cols[2].lower()
 
-                        xdt['bin_rating'] = pd.cut(
-                            xdt['score'],
-                            bins=breaks,
-                            labels=bin_labels,
-                            include_lowest=True
-                        ).astype(float)
+                    bin_labels = list(range(len(breaks)-1, 0, -1))
 
-                        xdft2 = (
-                            xdt
-                            .rename(columns=lambda c: c.lower())
-                            .dropna(subset=[obs_col])
-                            .assign(
-                                rating=lambda df: np.select(
-                                    [
-                                        df[obs_col] >= 89,
-                                        df[obs_col] == 59,
-                                        df[obs_col] == 29,
-                                    ],
-                                    [9, 8, 7],
-                                    default=df['bin_rating']
-                                )
+                    xdt['bin_rating'] = pd.cut(
+                        xdt['score'],
+                        bins=breaks,
+                        labels=bin_labels,
+                        include_lowest=True
+                    ).astype(float)
+
+                    xdft2 = (
+                        xdt
+                        .rename(columns=lambda c: c.lower())
+                        .dropna(subset=[obs_col])
+                        .assign(
+                            rating=lambda df: np.select(
+                                [
+                                    df[obs_col] >= 89,
+                                    df[obs_col] == 59,
+                                    df[obs_col] == 29,
+                                ],
+                                [9, 8, 7],
+                                default=df['bin_rating']
                             )
-                            .drop(columns=['bin_rating'])
-                            .loc[lambda df: df['rating'] <= 6]
                         )
+                        .drop(columns=['bin_rating'])
+                        .loc[lambda df: df['rating'] <= 6]
+                    )
 
-                        st.session_state.xdft2 = xdft2
-                        st.session_state.step1_done = True
+                    st.session_state.xdft2 = xdft2
+                    st.caption(f"**✅ Rating assigned based on Final Binning Table**")
+                    st.dataframe(xdft2.head(), use_container_width=True)
 
-                        st.caption(f"**✅ Rating assigned based on Final Binning Table**")
-                        st.dataframe(xdft2.head(), use_container_width=True, hide_index=True)
+                if "xdft2" in st.session_state:
+                    xdft2 = st.session_state.xdft2.copy()
 
+                    xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
 
-                if st.session_state.get("step1_done") and "xdft2" in st.session_state:
-                    if st.button("📊 Show Rating-wise Distribution"):
-                        xdft2 = st.session_state.xdft2.copy()
-                        xdft2 = xdft2.rename(columns={xdft2.columns[3]: "target"})
+                    a = xdft2.groupby('rating', as_index=False)['target'].count()
+                    b = xdft2.groupby('rating', as_index=False)['limit'].sum()
 
-                        a = xdft2.groupby('rating', as_index=False)['target'].count()
-                        b = xdft2.groupby('rating', as_index=False)['limit'].sum()
-                        f = pd.merge(a, b, on='rating')
+                    f = pd.merge(a, b, on='rating')
 
-                        f['count_distr'] = (f['target'] / f['target'].sum()) * 100
-                        f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
+                    f['count_distr'] = (f['target'] / f['target'].sum()) * 100
+                    f['limit_distr'] = (f['limit'] / f['limit'].sum()) * 100
 
-                        f['limit'] = f['limit'].round(0).astype(int)
-                        f['limit'] = f['limit'].map('{:,}'.format)
-                        f['count_distr'] = f['count_distr'].round(2)
-                        f['limit_distr'] = f['limit_distr'].round(2)
+                    f['limit'] = f['limit'].round(0).astype(int)
+                    f['limit'] = f['limit'].map('{:,}'.format)
+                    f['count_distr'] = f['count_distr'].round(2)
+                    f['limit_distr'] = f['limit_distr'].round(2)
 
-                        st.session_state.step2_done = True
+                    st.caption("**📊 Rating-wise Distribution**")
+                    st.dataframe(f, use_container_width=True)
 
-                        st.caption("**📊 Rating-wise Distribution**")
-                        st.dataframe(f, use_container_width=True, hide_index=True)
+                    fig = px.bar(
+                        f,
+                        x="rating",
+                        y=["count_distr", "limit_distr"],
+                        barmode="group",
+                        title="📈 Distribution of Count and Limit by Rating"
+                    )
+                    fig.update_layout(
+                        xaxis_title="Rating",
+                        yaxis_title="Distribution (%)"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
-                        fig = px.bar(
-                            f,
-                            x="rating",
-                            y=["count_distr", "limit_distr"],
-                            barmode="group",
-                            title="📈 Distribution of Count and Limit by Rating"
-                        )
-                        fig.update_layout(
-                            xaxis_title="Rating",
-                            yaxis_title="Distribution (%)"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+                if "xdft2" in st.session_state:
+                    bt = st.session_state.xdft2.copy()
 
-
-                if st.session_state.get("step2_done") and "xdft2" in st.session_state:
-                    if st.button("🧮 Calculate Brier Score"):
-                        try:
-                            xdft2 = st.session_state.xdft2.copy()
-                            xdft2['SS'] = (xdft2['pd'] - xdft2['target']) ** 2
-                            bscore = xdft2['SS'].mean()
-
-                            st.session_state.step3_done = True
-                            st.metric(label="Brier Score", value=round(bscore, 5))
-
-                        except Exception as e:
-                            st.error(f"⚠️ Error calculating Brier Score: {e}")
-
-                if st.session_state.get("step3_done") and "xdft2" in st.session_state:
                     if st.button("📌 Run Binomial Test"):
-                        bt = st.session_state.xdft2.copy()
                         avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
                         avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
@@ -2186,4 +2167,4 @@ if menu == "🛠️ Scorecard Development":
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
 
                         st.caption("**📊 Binomial Test Results:**")
-                        st.dataframe(merged_table, use_container_width=True, hide_index=True)
+                        st.dataframe(merged_table, use_container_width=True)
