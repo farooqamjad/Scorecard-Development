@@ -2167,21 +2167,25 @@ if menu == "🛠️ Scorecard Development":
                 if st.session_state.get("step3_done") and "xdft2" in st.session_state:
                     if st.button("📌 Run Binomial Test"):
                         bt = st.session_state.xdft2.copy()
+                        num_ratings = st.session_state.num_ratings  # <-- dynamically use user's input
+
                         avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
                         avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
                         N, D = [], []
-                        for i in range(1, 7):
+                        for i in range(1, num_ratings + 1):
                             N.append(len(bt[bt['rating'] == i]))
                             D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
 
+                        # Make sure lengths match dynamically
                         table1 = avg_pd.copy()
                         table1['N'] = N
                         table1['D'] = D
                         table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
+                        # Calculate p-values
                         pv = []
-                        for i in range(1, 7):
+                        for i in range(1, num_ratings + 1):
                             n = len(bt[bt['rating'] == i])
                             d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
                             pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
@@ -2195,7 +2199,7 @@ if menu == "🛠️ Scorecard Development":
                             pv.append(pval)
 
                         table2 = pd.DataFrame({
-                            "Ratings": range(1, 7),
+                            "Ratings": range(1, num_ratings + 1),
                             "p-value": [round(v, 5) for v in pv]
                         })
                         table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
