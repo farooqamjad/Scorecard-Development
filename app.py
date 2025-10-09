@@ -2185,11 +2185,13 @@ if menu == "🛠️ Scorecard Development":
                         # Run binomial test
                         pv = []
                         for _, row in table1.iterrows():
-                            n = int(row['N'])  # ensure integer
-                            d = int(round(row['D']))  # ensure integer, round if needed
-                            pd_val = row['avg_pd']
+                            n = int(row['N'])  # total observations
+                            d = int(round(row['D']))  # total defaults, rounded and cast to int
+                            pd_val = row['avg_pd']  # average predicted probability
+
                             if d > 0:
-                                btest = binomtest(k=d - 1, n=n, p=pd_val, alternative="less")
+                                k = int(d - 1)  # ensure k is an integer
+                                btest = binomtest(k=k, n=n, p=pd_val, alternative="less")
                                 pval = 1 - btest.pvalue
                             else:
                                 pval = 1.0
