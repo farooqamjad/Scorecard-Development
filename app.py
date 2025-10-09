@@ -2185,8 +2185,8 @@ if menu == "🛠️ Scorecard Development":
                         # Run binomial test
                         pv = []
                         for _, row in table1.iterrows():
-                            n = row['N']
-                            d = row['D']
+                            n = int(row['N'])
+                            d = int(row['D'])
                             pd_val = row['avg_pd']
                             if d > 0:
                                 btest = binomtest(d - 1, n, pd_val, alternative="less")
