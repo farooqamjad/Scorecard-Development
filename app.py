@@ -1708,7 +1708,7 @@ if menu == "🛠️ Scorecard Development":
                     col1, col2, col3 = st.columns(3)
                     col1.metric("⚖️ Adjusted Baseline Score", f"{adjusted_baseline_score:.2f}")
                     col2.metric("⬇️ Minimum Score", f"{min_score:.2f}")
-                    col3.metric("⬆️ Maximum Score", f"{max_score:.2f}"
+                    col3.metric("⬆️ Maximum Score", f"{max_score:.2f}")
 
                 if "show_graphs" not in st.session_state:
                     st.session_state.show_graphs = False
