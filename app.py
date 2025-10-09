@@ -2057,19 +2057,35 @@ if menu == "🛠️ Scorecard Development":
                         st.dataframe(xdt1.head(), use_container_width=True, hide_index=True)
 
                 if "xdt" in st.session_state:
+                    st.markdown("### 🧩 Rating Mapping Configuration")
+
+                    # Ask user how many rating grades they want (independent from number of score bins)
+                    num_ratings = st.number_input(
+                        "🎯 Define number of Rating Grades (e.g., 6, 7, 8)",
+                        min_value=3,
+                        max_value=12,
+                        value=6,
+                        step=1
+                    )
+
                     if st.button("🗂️ Map Ratings"):
                         xdt = st.session_state.xdt.copy()
                         breaks = st.session_state.final_breaks
-
                         obs_col = st.session_state.selected_cols[2].lower()
-                        bin_labels = list(range(len(breaks)-1, 0, -1))
 
+                        # Base mapping from score bins (descending score -> higher rating)
+                        bin_labels = list(range(len(breaks) - 1, 0, -1))
                         xdt['bin_rating'] = pd.cut(
                             xdt['score'],
                             bins=breaks,
                             labels=bin_labels,
                             include_lowest=True
                         ).astype(float)
+
+                        # Now derive performance-window-based overrides dynamically
+                        # Define top 3 "exception" rules as in your current logic, but scale based on number of rating bands
+                        # Example: if user picks 8 ratings, the top 3 become 8, 9, 10 etc.
+                        perf_map_values = [num_ratings + 1, num_ratings + 2, num_ratings + 3]
 
                         xdft2 = (
                             xdt
@@ -2078,22 +2094,24 @@ if menu == "🛠️ Scorecard Development":
                             .assign(
                                 rating=lambda df: np.select(
                                     [
-                                        df[obs_col] >= 89,
-                                        df[obs_col] == 59,
-                                        df[obs_col] == 29,
+                                        df[obs_col] >= 89,  # top-performing accounts
+                                        df[obs_col] == 59,  # mid-performing
+                                        df[obs_col] == 29,  # low-performing
                                     ],
-                                    [9, 8, 7],
+                                    perf_map_values,  # dynamically adjusted
                                     default=df['bin_rating']
                                 )
                             )
                             .drop(columns=['bin_rating'])
-                            .loc[lambda df: df['rating'] <= 6]
+                            # Truncate to user-specified number of ratings
+                            .loc[lambda df: df['rating'] <= num_ratings]
                         )
 
                         st.session_state.xdft2 = xdft2
+                        st.session_state.num_ratings = num_ratings
                         st.session_state.step1_done = True
 
-                        st.caption(f"**✅ Rating assigned based on Final Binning Table**")
+                        st.caption(f"✅ Ratings mapped successfully (Total Grades: {num_ratings})")
                         st.dataframe(xdft2.head(), use_container_width=True, hide_index=True)
 
 
