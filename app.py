@@ -2167,51 +2167,46 @@ if menu == "🛠️ Scorecard Development":
                 if st.session_state.get("step3_done") and "xdft2" in st.session_state:
                     if st.button("📌 Run Binomial Test"):
                         bt = st.session_state.xdft2.copy()
+                        num_ratings = st.session_state.num_ratings  # dynamically retrieved
 
-                        # Compute avg PD per rating
-                        avg_pd = (
-                            bt.groupby("rating", as_index=False)["pd"]
-                            .mean()
-                            .rename(columns={"rating": "Ratings", "pd": "avg_pd"})
-                        )
+                        # Calculate average PD per rating
+                        avg_pd = bt.groupby('rating', as_index=False)['pd'].mean()
+                        avg_pd.rename(columns={'rating': 'Ratings', 'pd': 'avg_pd'}, inplace=True)
 
-                        results = []
-                        ratings_in_data = sorted(bt["rating"].unique())
+                        # Count total and defaulted accounts per rating
+                        N, D = [], []
+                        for i in range(1, num_ratings + 1):
+                            N.append(len(bt[bt['rating'] == i]))
+                            D.append(len(bt[(bt['rating'] == i) & (bt['target'] == 1)]))
 
-                        for rating in ratings_in_data:
-                            n = (bt["rating"] == rating).sum()
-                            d = ((bt["rating"] == rating) & (bt["target"] == 1)).sum()
-                            pd_val = avg_pd.loc[avg_pd["Ratings"] == rating, "avg_pd"].iloc[0]
+                        # Assemble table1
+                        table1 = avg_pd.copy()
+                        table1['N'] = N
+                        table1['D'] = D
+                        table1 = table1.sort_values('Ratings').reset_index(drop=True)
 
+                        # Run binomial test per rating
+                        pv = []
+                        for i in range(1, num_ratings + 1):
+                            n = len(bt[bt['rating'] == i])
+                            d = len(bt[(bt['rating'] == i) & (bt['target'] == 1)])
+                            pd_val = avg_pd.loc[avg_pd['Ratings'] == i, 'avg_pd'].values[0]
                             if d > 0:
                                 btest = binomtest(d - 1, n, pd_val, alternative="less")
                                 pval = 1 - btest.pvalue
                             else:
                                 pval = 1.0
+                            pv.append(pval)
 
-                            results.append({
-                                "Ratings": rating,
-                                "N": n,
-                                "D": d,
-                                "avg_pd": pd_val,
-                                "p-value": round(pval, 5),
-                                "Result": "TRUE" if pval <= 0.01 else "FALSE"
-                            })
+                        # Assemble table2
+                        table2 = pd.DataFrame({
+                            "Ratings": list(range(1, num_ratings + 1)),
+                            "p-value": [round(v, 5) for v in pv]
+                        })
+                        table2["Result"] = table2["p-value"].apply(lambda x: "TRUE" if x <= 0.01 else "FALSE")
+                        table2 = table2.reset_index(drop=True)
 
-                        merged_table = pd.DataFrame(results)
-
+                        # Merge and display
+                        merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
                         st.caption("**📊 Binomial Test Results:**")
                         st.dataframe(merged_table, use_container_width=True, hide_index=True)
-
-                        # Optional chart
-                        fig = px.bar(
-                            merged_table,
-                            x="Ratings",
-                            y="p-value",
-                            color="Result",
-                            text="p-value",
-                            title="📈 Binomial Test (p-values by Rating)"
-                        )
-                        fig.update_traces(textposition="outside")
-                        fig.update_layout(yaxis=dict(range=[0, 1]), showlegend=False)
-                        st.plotly_chart(fig, use_container_width=True)
