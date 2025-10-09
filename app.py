@@ -1695,19 +1695,20 @@ if menu == "🛠️ Scorecard Development":
                         st.caption("📊 Individual Gini scores across 10 random samples (40% each)")
                         st.dataframe(gini_df.style.format({"Gini Score (%)": "{:.2f}%"}), use_container_width=True)
 
-                target_numeric = cdata['target'].cat.codes if hasattr(cdata['target'], 'cat') else cdata['target'].astype(int)
-                bp = target_numeric.mean()
-                basepoints_value = card['basepoints'].loc[0, 'points']
-                adjusted_baseline_score = (np.log(bp / (1 - bp)) * 20 / np.log(2)) + basepoints_value
+                if st.button("📈 Show Score Summary"):
+                    target_numeric = cdata['target'].cat.codes if hasattr(cdata['target'], 'cat') else cdata['target'].astype(int)
+                    bp = target_numeric.mean()
+                    basepoints_value = card['basepoints'].loc[0, 'points']
+                    adjusted_baseline_score = (np.log(bp / (1 - bp)) * 20 / np.log(2)) + basepoints_value
 
-                min_score = scores["score"].min()
-                max_score = scores["score"].max()
+                    min_score = scores["score"].min()
+                    max_score = scores["score"].max()
 
-                    # Show in one line
-                col1, col2, col3 = st.columns(3)
-                col1.metric("⚖️ Adjusted Baseline Score", f"{adjusted_baseline_score:.2f}")
-                col2.metric("⬇️ Minimum Score", f"{min_score:.2f}")
-                col3.metric("⬆️ Maximum Score", f"{max_score:.2f}")
+                    # Show metrics in one line
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("⚖️ Adjusted Baseline Score", f"{adjusted_baseline_score:.2f}")
+                    col2.metric("⬇️ Minimum Score", f"{min_score:.2f}")
+                    col3.metric("⬆️ Maximum Score", f"{max_score:.2f}"
 
                 if "show_graphs" not in st.session_state:
                     st.session_state.show_graphs = False
@@ -2208,17 +2209,3 @@ if menu == "🛠️ Scorecard Development":
                         merged_table = pd.merge(table1, table2, on="Ratings", how="inner")
                         st.caption("**📊 Binomial Test Results:**")
                         st.dataframe(merged_table, use_container_width=True, hide_index=True)
-
-                        target_numeric = cdata['target'].cat.codes if hasattr(cdata['target'], 'cat') else cdata['target'].astype(int)
-                        bp = target_numeric.mean()
-                        basepoints_value = card['basepoints'].loc[0, 'points']
-                        adjusted_baseline_score = (np.log(bp / (1 - bp)) * 20 / np.log(2)) + basepoints_value
-
-                        min_score = scores["score"].min()
-                        max_score = scores["score"].max()
-
-                            # Show in one line
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("⚖️ Adjusted Baseline Score", f"{adjusted_baseline_score:.2f}")
-                        col2.metric("⬇️ Minimum Score", f"{min_score:.2f}")
-                        col3.metric("⬆️ Maximum Score", f"{max_score:.2f}")
