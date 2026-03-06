@@ -191,7 +191,7 @@ st.markdown("""
     </style>
 
     <div class="center-wrapper">
-        <h1 class="scorecard-title">Credit Risk Scorecard</h1>
+        <h1 class="scorecard-title">Credit Risk Scorecard Development</h1>
     </div>
 """, unsafe_allow_html=True)
 
